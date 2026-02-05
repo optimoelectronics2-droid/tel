@@ -2,57 +2,171 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Trifusion Technologies</title>
+<title>Trifusion Technologies — Catálogo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="style.css">
+
+<style>
+body{
+    margin:0;
+    font-family:system-ui, Arial, sans-serif;
+    background:#0b0f19;
+    color:#e6ecff;
+}
+header{
+    padding:18px;
+    background:#000;
+}
+.catalogo{
+    max-width:1100px;
+    margin:30px auto;
+    padding:0 16px;
+}
+.categoria{
+    margin:26px 0 14px;
+    padding:14px 18px;
+    background:rgba(0,194,255,.25);
+    border-left:6px solid #00c2ff;
+    font-weight:800;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+}
+.producto{
+    background:#101624;
+    border:1px solid #1f2940;
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+}
+.descripcion{
+    color:#00c2ff;
+    font-weight:600;
+}
+.precio{
+    color:#ff4b6a;
+    font-weight:700;
+    white-space:nowrap;
+}
+.foto{
+    cursor:pointer;
+    font-size:20px;
+}
+</style>
 </head>
 
 <body>
 
-<h1>Catálogo</h1>
+<header>
+    <h1>Trifusion Technologies</h1>
+</header>
 
-<div id="catalogo"></div>
+<div id="catalogo" class="catalogo"></div>
 
 <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <script>
-const db = firebase.firestore();
-const catalogo = document.getElementById("catalogo");
+const SHEET_ID = "1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+const cont = document.getElementById("catalogo");
 
-db.collection("products")
-.orderBy("createdAt","desc")
-.onSnapshot(snap=>{
-  catalogo.innerHTML = "";
+// 🔹 helpers
+function limpiarEmojis(txt){
+    return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
+}
 
-  snap.forEach(doc=>{
-    const p = doc.data();
+function soloUnaColumnaConTexto(row){
+    return row.filter(c => (c||"").trim()).length === 1;
+}
 
-    const card = document.createElement("div");
-    card.className = "producto";
+function esCategoria(row){
+    if(!soloUnaColumnaConTexto(row)) return false;
+    const texto = row.find(c => (c||"").trim()).trim();
+    if(/\d/.test(texto)) return false;
+    if(texto.length > 15) return false;
+    if(texto.toUpperCase().includes("TRANSITO")) return false;
+    return true;
+}
 
-    card.innerHTML = `
-      ${p.image ? `
-        <img src="${p.image}" style="
-          width:120px;
-          height:120px;
-          object-fit:contain;
-          border-radius:10px;
-          background:#0b0f19;
-        ">
-      ` : ""}
+function formatearPrecio(n){
+    return "$" + Number(n).toLocaleString("es-DO");
+}
 
-      <div>
-        <div class="descripcion">${p.name}</div>
-        <div class="precio">$${p.price.toLocaleString("es-DO")}</div>
-      </div>
-    `;
+// 🔑 ID estable del producto
+function productId(text){
+    return limpiarEmojis(text)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g,"-")
+        .replace(/(^-|-$)/g,"");
+}
 
-    catalogo.appendChild(card);
-  });
+// 📦 cache de imágenes
+const imagenes = {};
+
+// 🔥 cargar imágenes desde Firebase
+db.collection("products").get().then(snap=>{
+    snap.forEach(doc=>{
+        imagenes[doc.id] = doc.data().image;
+    });
+});
+
+// 🔥 cargar catálogo
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(csv=>{
+    Papa.parse(csv,{
+        skipEmptyLines:true,
+        complete:(res)=>{
+            cont.innerHTML = "";
+
+            res.data.forEach(row=>{
+                const A = (row[0]||"").trim();
+                const C = (row[2]||"").trim();
+                const D = (row[3]||"").trim();
+
+                // CATEGORÍA
+                if(esCategoria(row)){
+                    const texto = limpiarEmojis(
+                        row.find(c => (c||"").trim()).trim()
+                    );
+                    const cat = document.createElement("div");
+                    cat.className = "categoria";
+                    cat.textContent = texto;
+                    cont.appendChild(cat);
+                    return;
+                }
+
+                // TRANSITO
+                if(D.toUpperCase().includes("TRANSITO")) return;
+                if(!C || !D) return;
+
+                const num = D.replace(/[^0-9]/g,"");
+                if(!num) return;
+
+                const nombre = limpiarEmojis((A ? A + " " : "") + C);
+                const id = productId(nombre);
+                const img = imagenes[id];
+
+                const prod = document.createElement("div");
+                prod.className = "producto";
+                prod.innerHTML = `
+                    <div class="descripcion">${nombre}</div>
+                    <div style="display:flex;gap:12px;align-items:center">
+                        ${img ? `<div class="foto" onclick="window.open('${img}','_blank')">📷</div>` : ""}
+                        <div class="precio">${formatearPrecio(num)}</div>
+                    </div>
+                `;
+                cont.appendChild(prod);
+            });
+        }
+    });
 });
 </script>
 
