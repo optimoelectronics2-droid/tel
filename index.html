@@ -1,4 +1,19 @@
-<!DOCTYPE html>
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  background-color: white; /* Ensure the iframe has a white background */
+                }
+
+                
+              </style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -42,7 +57,7 @@
             letter-spacing: -0.5px;
         }
         
-        .admin-controls-header {
+        .admin-controls {
             display: flex;
             gap: 12px;
         }
@@ -152,6 +167,12 @@
             opacity: 0.7;
         }
         
+        .producto-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
         .descripcion {
             color: #4da6ff;
             font-weight: 700;
@@ -192,6 +213,11 @@
             padding: 16px;
             margin-top: 12px;
             border: 1px solid rgba(100, 80, 180, 0.5);
+            display: none;
+        }
+        
+        .admin-section.active {
+            display: block;
         }
         
         .admin-section h4 {
@@ -389,7 +415,7 @@
                 padding: 15px;
             }
             
-            .admin-controls-header {
+            .admin-controls {
                 width: 100%;
                 justify-content: center;
             }
@@ -422,7 +448,7 @@
 <body>
     <header>
         <h1>Trifusion Technologies</h1>
-        <div class="admin-controls-header">
+        <div class="admin-controls">
             <button id="loginBtn" class="btn btn-admin">🔐 Modo Admin</button>
             <button id="logoutBtn" class="btn btn-logout">👋 Salir</button>
         </div>
@@ -453,11 +479,14 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     
     <script>
-        // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
+        // Firebase configuration - USANDO TU CONFIGURACIÓN REAL
         const firebaseConfig = {
-            apiKey: "TU_API_KEY_AQUI",
-            authDomain: "tu-proyecto.firebaseapp.com",
-            projectId: "tu-proyecto"
+            apiKey: "AIzaSyDlOJqBgd-8KqUT-Y94lsma5W8T79PsPjM",
+            authDomain: "trifusion-cotizador.firebaseapp.com",
+            projectId: "trifusion-cotizador",
+            storageBucket: "trifusion-cotizador.firebasestorage.app",
+            messagingSenderId: "407374211882",
+            appId: "1:407374211882:web:b692792ccc39c8d48f4c53"
         };
         
         // Initialize Firebase
@@ -743,3 +772,28 @@
 </body>
 </html>
 
+
+
+              <script>
+                              rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Productos: público puede leer, admin puede escribir
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Configuración general
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+
+
+              </script>
+                        </body>
+                        </html>
+                    
