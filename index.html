@@ -38,21 +38,41 @@ header{
     margin-bottom:10px;
     display:flex;
     justify-content:space-between;
-    align-items:center;
     gap:12px;
+    align-items:center;
 }
 .descripcion{
     color:#00c2ff;
     font-weight:600;
+    flex:1;
 }
 .precio{
     color:#ff4b6a;
     font-weight:700;
     white-space:nowrap;
 }
-.foto{
+.btn-img{
+    background:#00c2ff;
+    color:#02030a;
+    border:none;
+    border-radius:8px;
+    padding:6px 10px;
     cursor:pointer;
-    font-size:20px;
+    font-weight:700;
+}
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+}
+.modal img{
+    max-width:90%;
+    max-height:90%;
+    border-radius:10px;
 }
 </style>
 </head>
@@ -65,21 +85,33 @@ header{
 
 <div id="catalogo" class="catalogo"></div>
 
-<!-- Firebase -->
+<div id="modal" class="modal" onclick="this.style.display='none'">
+    <img id="modalImg">
+</div>
+
+<!-- LIBRERÍAS -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
 <script>
+// ================== CONFIG ==================
 const SHEET_ID = "1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 const cont = document.getElementById("catalogo");
 
-// 🔹 helpers
+// ================== HELPERS ==================
 function limpiarEmojis(txt){
     return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
+}
+
+function idProducto(text){
+    return limpiarEmojis(text)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g,"-")
+        .replace(/(^-|-$)/g,"");
 }
 
 function soloUnaColumnaConTexto(row){
@@ -99,25 +131,16 @@ function formatearPrecio(n){
     return "$" + Number(n).toLocaleString("es-DO");
 }
 
-// 🔑 ID estable del producto
-function productId(text){
-    return limpiarEmojis(text)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g,"-")
-        .replace(/(^-|-$)/g,"");
-}
+// ================== CARGAR IMÁGENES ==================
+let imagenes = {};
 
-// 📦 cache de imágenes
-const imagenes = {};
-
-// 🔥 cargar imágenes desde Firebase
 db.collection("products").get().then(snap=>{
     snap.forEach(doc=>{
         imagenes[doc.id] = doc.data().image;
     });
 });
 
-// 🔥 cargar catálogo
+// ================== CARGAR CATÁLOGO ==================
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(csv=>{
@@ -131,43 +154,46 @@ fetch(CSV_URL)
                 const C = (row[2]||"").trim();
                 const D = (row[3]||"").trim();
 
-                // CATEGORÍA
+                // 🔵 CATEGORÍA
                 if(esCategoria(row)){
-                    const texto = limpiarEmojis(
-                        row.find(c => (c||"").trim()).trim()
-                    );
                     const cat = document.createElement("div");
                     cat.className = "categoria";
-                    cat.textContent = texto;
+                    cat.textContent = limpiarEmojis(
+                        row.find(c => (c||"").trim()).trim()
+                    );
                     cont.appendChild(cat);
                     return;
                 }
 
-                // TRANSITO
+                // 🚫 TRÁNSITO
                 if(D.toUpperCase().includes("TRANSITO")) return;
-                if(!C || !D) return;
 
+                if(!C || !D) return;
                 const num = D.replace(/[^0-9]/g,"");
                 if(!num) return;
 
-                const nombre = limpiarEmojis((A ? A + " " : "") + C);
-                const id = productId(nombre);
+                const nombre = limpiarEmojis(A ? A+" " : "") + C;
+                const id = idProducto(nombre);
                 const img = imagenes[id];
 
                 const prod = document.createElement("div");
                 prod.className = "producto";
                 prod.innerHTML = `
                     <div class="descripcion">${nombre}</div>
-                    <div style="display:flex;gap:12px;align-items:center">
-                        ${img ? `<div class="foto" onclick="window.open('${img}','_blank')">📷</div>` : ""}
-                        <div class="precio">${formatearPrecio(num)}</div>
-                    </div>
+                    ${img ? `<button class="btn-img" onclick="verImg('${img}')">📷</button>` : ""}
+                    <div class="precio">${formatearPrecio(num)}</div>
                 `;
                 cont.appendChild(prod);
             });
         }
     });
 });
+
+// ================== MODAL ==================
+function verImg(src){
+    modalImg.src = src;
+    modal.style.display="flex";
+}
 </script>
 
 </body>
