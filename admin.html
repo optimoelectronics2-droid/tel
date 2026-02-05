@@ -7,24 +7,25 @@
 
 <style>
 body{
-  font-family:system-ui, Arial;
-  background:#0b0f19;
-  color:#e6ecff;
   margin:0;
   padding:20px;
+  font-family:system-ui, Arial, sans-serif;
+  background:#0b0f19;
+  color:#e6ecff;
 }
 .panel{
-  max-width:420px;
+  max-width:500px;
   margin:auto;
   background:#101624;
   padding:20px;
   border-radius:12px;
   border:1px solid #1f2940;
 }
-input,button{
+h2{margin-top:0}
+input, button{
   width:100%;
   padding:10px;
-  margin-top:6px;
+  margin-top:8px;
   border-radius:8px;
   border:none;
 }
@@ -33,38 +34,44 @@ button{
   cursor:pointer;
 }
 .producto{
-  margin-top:10px;
   border:1px solid #1f2940;
   padding:10px;
-  border-radius:8px;
+  border-radius:10px;
+  margin-top:10px;
 }
-img{
+.producto img{
   width:100%;
   margin-top:6px;
   border-radius:6px;
 }
+.acciones{
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+}
+.acciones button{flex:1}
 </style>
 </head>
 
 <body>
 
 <!-- LOGIN -->
-<div id="login" class="panel">
-  <h2>Admin Login</h2>
+<div id="loginBox" class="panel">
+  <h2>Administrador</h2>
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Contraseña">
   <button onclick="login()">Entrar</button>
 </div>
 
-<!-- PANEL -->
-<div id="admin" class="panel" style="display:none">
-  <h2>Agregar / Editar imagen</h2>
+<!-- ADMIN -->
+<div id="adminBox" class="panel" style="display:none">
+  <h2>Imágenes de productos</h2>
 
-  <input id="productName" placeholder="Nombre exacto del producto">
-  <input id="productImage" placeholder="Link público de imagen (Drive)">
-  <button onclick="guardar()">Guardar</button>
+  <input id="productId" placeholder="ID del producto (ej: hp-15-fd0215dx)">
+  <input id="productImage" placeholder="Link público de imagen">
+  <button onclick="guardar()">Guardar / Actualizar</button>
 
-  <h3>Productos con imagen</h3>
+  <h3 style="margin-top:20px">Productos guardados</h3>
   <div id="lista"></div>
 
   <button style="margin-top:20px" onclick="logout()">Salir</button>
@@ -77,15 +84,7 @@ img{
 <script src="firebase-config.js"></script>
 
 <script>
-// ========= HELPERS =========
-function idProducto(text){
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g,"-")
-    .replace(/(^-|-$)/g,"");
-}
-
-// ========= AUTH =========
+// ================= AUTH =================
 function login(){
   auth.signInWithEmailAndPassword(
     email.value,
@@ -98,22 +97,22 @@ function logout(){
 }
 
 auth.onAuthStateChanged(user=>{
-  login.style.display = user ? "none" : "block";
-  admin.style.display = user ? "block" : "none";
+  loginBox.style.display = user ? "none" : "block";
+  adminBox.style.display = user ? "block" : "none";
   if(user) cargar();
 });
 
-// ========= CRUD =========
+// ================= CRUD =================
 function guardar(){
-  const name = productName.value.trim();
-  const image = productImage.value.trim();
-  if(!name) return alert("Nombre requerido");
+  const id = productId.value.trim();
+  const img = productImage.value.trim();
+  if(!id) return alert("ID requerido");
 
   db.collection("products")
-    .doc(idProducto(name))
-    .set({ image })
+    .doc(id)
+    .set({ image: img })
     .then(()=>{
-      productName.value="";
+      productId.value="";
       productImage.value="";
       cargar();
     });
@@ -129,15 +128,24 @@ function cargar(){
       div.innerHTML=`
         <strong>${doc.id}</strong>
         ${d.image ? `<img src="${d.image}">` : ""}
-        <button onclick="borrar('${doc.id}')">Borrar</button>
+        <div class="acciones">
+          <button onclick="editar('${doc.id}','${d.image||""}')">Editar</button>
+          <button onclick="borrar('${doc.id}')">Borrar</button>
+        </div>
       `;
       lista.appendChild(div);
     });
   });
 }
 
+function editar(id,img){
+  productId.value = id;
+  productImage.value = img;
+  window.scrollTo(0,0);
+}
+
 function borrar(id){
-  if(!confirm("¿Eliminar imagen?")) return;
+  if(!confirm("¿Eliminar este producto?")) return;
   db.collection("products").doc(id).delete().then(cargar);
 }
 </script>
