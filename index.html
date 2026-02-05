@@ -12,8 +12,14 @@ body{
   background:#0b0f19;
   color:#e6ecff;
 }
-header{padding:18px;background:#000}
-.catalogo{max-width:1100px;margin:30px auto;padding:0 16px}
+header{
+  padding:16px;
+  background:#000;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.catalogo{max-width:1100px;margin:20px auto;padding:0 16px}
 .categoria{
   margin:26px 0 14px;
   padding:14px 18px;
@@ -26,22 +32,23 @@ header{padding:18px;background:#000}
   background:#101624;
   border:1px solid #1f2940;
   border-radius:12px;
-  padding:14px;
+  padding:12px;
   margin-bottom:10px;
   display:flex;
-  align-items:center;
   gap:10px;
+  align-items:center;
 }
 .descripcion{flex:1;color:#00c2ff;font-weight:600}
 .precio{color:#ff4b6a;font-weight:700}
-.btn-img{
-  background:#00c2ff;
-  color:#02030a;
+.btn{
   border:none;
   border-radius:6px;
   padding:6px 10px;
   cursor:pointer;
+  font-weight:700;
 }
+.img-btn{background:#00c2ff;color:#02030a}
+.edit-btn{background:#ffb703;color:#000}
 .modal{
   position:fixed;
   inset:0;
@@ -49,8 +56,31 @@ header{padding:18px;background:#000}
   display:none;
   align-items:center;
   justify-content:center;
+  z-index:999;
 }
 .modal img{max-width:90%;max-height:90%}
+.login{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.9);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+.login-box{
+  background:#101624;
+  padding:20px;
+  border-radius:10px;
+  width:280px;
+}
+.login-box input{
+  width:100%;
+  padding:8px;
+  margin-top:6px;
+  border-radius:6px;
+  border:none;
+}
 </style>
 </head>
 
@@ -58,81 +88,133 @@ header{padding:18px;background:#000}
 
 <header>
   <h1>Trifusion Technologies</h1>
+  <button id="adminBtn" class="btn edit-btn">ADMIN</button>
 </header>
 
 <div id="catalogo" class="catalogo"></div>
 
-<div id="modal" class="modal" onclick="this.style.display='none'">
-  <img id="modalImg">
+<!-- MODAL IMAGEN -->
+<div id="imgModal" class="modal" onclick="this.style.display='none'">
+  <img id="imgModalSrc">
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="login">
+  <div class="login-box">
+    <h3>Administrador</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Contraseña">
+    <button class="btn edit-btn" onclick="login()">Entrar</button>
+  </div>
 </div>
 
 <!-- LIBS -->
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <script>
-const SHEET_ID = "1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
-const cont = document.getElementById("catalogo");
+// ===== CONFIG =====
+const SHEET_ID="1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
+const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+const cont=document.getElementById("catalogo");
 
-const limpiar = t => t.replace(/[\u{1F300}-\u{1FAFF}]/gu,"").trim();
-const idProd = t => limpiar(t).toLowerCase().replace(/[^a-z0-9]+/g,"-");
+// ===== HELPERS =====
+const limpiar=t=>t.replace(/[\u{1F300}-\u{1FAFF}]/gu,"").trim();
+const idProd=t=>limpiar(t).toLowerCase().replace(/[^a-z0-9]+/g,"-");
+const precio=n=>"$"+Number(n).toLocaleString("es-DO");
 
-let imagenes = {};
+// ===== AUTH =====
+let isAdmin=false;
+adminBtn.onclick=()=>login.style.display="flex";
 
-// cargar imágenes
-db.collection("products").get().then(snap=>{
-  snap.forEach(d=>imagenes[d.id]=d.data().image);
-});
-
-fetch(CSV_URL)
-.then(r=>r.text())
-.then(csv=>{
-  Papa.parse(csv,{
-    skipEmptyLines:true,
-    complete:(res)=>{
-      res.data.forEach(row=>{
-        const A=(row[0]||"").trim();
-        const C=(row[2]||"").trim();
-        const D=(row[3]||"").trim();
-
-        if(row.filter(c=>(c||"").trim()).length===1){
-          const cat=document.createElement("div");
-          cat.className="categoria";
-          cat.textContent=limpiar(row.join(""));
-          cont.appendChild(cat);
-          return;
-        }
-
-        if(D.toUpperCase().includes("TRANSITO")) return;
-        if(!C||!D) return;
-
-        const n=D.replace(/\D/g,"");
-        if(!n) return;
-
-        const nombre=limpiar(A?A+" ":"")+C;
-        const id=idProd(nombre);
-        const img=imagenes[id];
-
-        const p=document.createElement("div");
-        p.className="producto";
-        p.innerHTML=`
-          <div class="descripcion">${nombre}</div>
-          ${img?`<button class="btn-img" onclick="verImg('${img}')">📷</button>`:""}
-          <div class="precio">$${Number(n).toLocaleString("es-DO")}</div>
-        `;
-        cont.appendChild(p);
-      });
-    }
-  });
-});
-
-function verImg(src){
-  modalImg.src=src;
-  modal.style.display="flex";
+function login(){
+  auth.signInWithEmailAndPassword(email.value,password.value)
+    .catch(e=>alert(e.message));
 }
+
+auth.onAuthStateChanged(u=>{
+  login.style.display="none";
+  isAdmin=!!u;
+  cargar();
+});
+
+// ===== IMÁGENES =====
+let imgs={};
+function cargarImgs(){
+  return db.collection("products").get().then(s=>{
+    imgs={};
+    s.forEach(d=>imgs[d.id]=d.data().image);
+  });
+}
+
+// ===== CATÁLOGO =====
+function esCategoria(row){
+  return row.filter(c=>(c||"").trim()).length===1 &&
+         !/\d/.test(row.join("")) &&
+         row.join("").length<15;
+}
+
+function cargar(){
+  cargarImgs().then(()=>{
+    cont.innerHTML="";
+    fetch(CSV_URL).then(r=>r.text()).then(csv=>{
+      Papa.parse(csv,{
+        skipEmptyLines:true,
+        complete:res=>{
+          res.data.forEach(row=>{
+            const A=(row[0]||"").trim();
+            const C=(row[2]||"").trim();
+            const D=(row[3]||"").trim();
+
+            if(esCategoria(row)){
+              const c=document.createElement("div");
+              c.className="categoria";
+              c.textContent=limpiar(row.join(""));
+              cont.appendChild(c);return;
+            }
+
+            if(D.toUpperCase().includes("TRANSITO")) return;
+            if(!C||!D) return;
+            const n=D.replace(/\D/g,""); if(!n) return;
+
+            const nombre=limpiar(A?A+" ":"")+C;
+            const id=idProd(nombre);
+            const img=imgs[id];
+
+            const p=document.createElement("div");
+            p.className="producto";
+            p.innerHTML=`
+              <div class="descripcion">${nombre}</div>
+              ${img?`<button class="btn img-btn" onclick="verImg('${img}')">📷</button>`:""}
+              ${isAdmin?`<button class="btn edit-btn" onclick="editar('${id}')">✏️</button>`:""}
+              <div class="precio">${precio(n)}</div>
+            `;
+            cont.appendChild(p);
+          });
+        }
+      });
+    });
+  });
+}
+
+// ===== ADMIN EDIT =====
+function editar(id){
+  const img=prompt("Link público de imagen:",imgs[id]||"");
+  if(img===null) return;
+  if(!img) db.collection("products").doc(id).delete().then(cargar);
+  else db.collection("products").doc(id).set({image:img}).then(cargar);
+}
+
+// ===== MODAL =====
+function verImg(src){
+  imgModalSrc.src=src;
+  imgModal.style.display="flex";
+}
+
+cargar();
 </script>
 
 </body>
