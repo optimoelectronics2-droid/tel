@@ -15,6 +15,9 @@ body{
 header{
     padding:18px;
     background:#000;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
 }
 .catalogo{
     max-width:1100px;
@@ -37,8 +40,7 @@ header{
     padding:14px;
     margin-bottom:10px;
     display:flex;
-    justify-content:space-between;
-    gap:12px;
+    gap:10px;
     align-items:center;
 }
 .descripcion{
@@ -51,15 +53,15 @@ header{
     font-weight:700;
     white-space:nowrap;
 }
-.btn-img{
-    background:#00c2ff;
-    color:#02030a;
+.btn{
     border:none;
     border-radius:8px;
     padding:6px 10px;
     cursor:pointer;
     font-weight:700;
 }
+.img-btn{background:#00c2ff;color:#02030a}
+.admin-btn{background:#ffb703;color:#000}
 .modal{
     position:fixed;
     inset:0;
@@ -74,6 +76,28 @@ header{
     max-height:90%;
     border-radius:10px;
 }
+.login{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000;
+}
+.login-box{
+    background:#101624;
+    padding:20px;
+    border-radius:12px;
+    width:300px;
+}
+.login-box input{
+    width:100%;
+    padding:8px;
+    margin-top:6px;
+    border-radius:6px;
+    border:none;
+}
 </style>
 </head>
 
@@ -81,119 +105,134 @@ header{
 
 <header>
     <h1>Trifusion Technologies</h1>
+    <button id="adminToggle" class="btn admin-btn">Admin</button>
 </header>
 
 <div id="catalogo" class="catalogo"></div>
 
-<div id="modal" class="modal" onclick="this.style.display='none'">
-    <img id="modalImg">
+<!-- MODAL IMAGEN -->
+<div id="imgModal" class="modal" onclick="this.style.display='none'">
+    <img id="imgModalSrc">
 </div>
 
-<!-- LIBRERÍAS -->
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<!-- LOGIN -->
+<div id="login" class="login">
+  <div class="login-box">
+    <h3>Admin</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Contraseña">
+    <button class="btn admin-btn" onclick="login()">Entrar</button>
+  </div>
+</div>
 
+<!-- LIBS -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <script>
-// ================== CONFIG ==================
+// ================= CONFIG =================
 const SHEET_ID = "1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 const cont = document.getElementById("catalogo");
 
-// ================== HELPERS ==================
-function limpiarEmojis(txt){
-    return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
+// ================= HELPERS =================
+const limpiar = t => t.replace(/[\u{1F300}-\u{1FAFF}]/gu,"").trim();
+const idProd = t => limpiar(t).toLowerCase().replace(/[^a-z0-9]+/g,"-");
+
+// ================= AUTH =================
+adminToggle.onclick = ()=> login.style.display="flex";
+
+function login(){
+  auth.signInWithEmailAndPassword(email.value,password.value)
+  .catch(e=>alert(e.message));
 }
 
-function idProducto(text){
-    return limpiarEmojis(text)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g,"-")
-        .replace(/(^-|-$)/g,"");
-}
-
-function soloUnaColumnaConTexto(row){
-    return row.filter(c => (c||"").trim()).length === 1;
-}
-
-function esCategoria(row){
-    if(!soloUnaColumnaConTexto(row)) return false;
-    const texto = row.find(c => (c||"").trim()).trim();
-    if(/\d/.test(texto)) return false;
-    if(texto.length > 15) return false;
-    if(texto.toUpperCase().includes("TRANSITO")) return false;
-    return true;
-}
-
-function formatearPrecio(n){
-    return "$" + Number(n).toLocaleString("es-DO");
-}
-
-// ================== CARGAR IMÁGENES ==================
-let imagenes = {};
-
-db.collection("products").get().then(snap=>{
-    snap.forEach(doc=>{
-        imagenes[doc.id] = doc.data().image;
-    });
+auth.onAuthStateChanged(user=>{
+  login.style.display = "none";
+  window.isAdmin = !!user;
+  cargar();
 });
 
-// ================== CARGAR CATÁLOGO ==================
-fetch(CSV_URL)
-.then(r=>r.text())
-.then(csv=>{
-    Papa.parse(csv,{
+// ================= IMÁGENES =================
+let imgs = {};
+function cargarImgs(){
+  return db.collection("products").get().then(s=>{
+    imgs={};
+    s.forEach(d=>imgs[d.id]=d.data().image);
+  });
+}
+
+// ================= CATÁLOGO =================
+function esCategoria(row){
+  return row.filter(c=>(c||"").trim()).length===1 &&
+         !/\d/.test(row.join("")) &&
+         row.join("").length<15;
+}
+
+function precio(n){return "$"+Number(n).toLocaleString("es-DO");}
+
+function cargar(){
+  cargarImgs().then(()=>{
+    fetch(CSV_URL).then(r=>r.text()).then(csv=>{
+      Papa.parse(csv,{
         skipEmptyLines:true,
         complete:(res)=>{
-            cont.innerHTML = "";
+          cont.innerHTML="";
+          res.data.forEach(row=>{
+            const A=(row[0]||"").trim();
+            const C=(row[2]||"").trim();
+            const D=(row[3]||"").trim();
 
-            res.data.forEach(row=>{
-                const A = (row[0]||"").trim();
-                const C = (row[2]||"").trim();
-                const D = (row[3]||"").trim();
+            if(esCategoria(row)){
+              const c=document.createElement("div");
+              c.className="categoria";
+              c.textContent=limpiar(row.join(""));
+              cont.appendChild(c); return;
+            }
 
-                // 🔵 CATEGORÍA
-                if(esCategoria(row)){
-                    const cat = document.createElement("div");
-                    cat.className = "categoria";
-                    cat.textContent = limpiarEmojis(
-                        row.find(c => (c||"").trim()).trim()
-                    );
-                    cont.appendChild(cat);
-                    return;
-                }
+            if(D.toUpperCase().includes("TRANSITO")) return;
+            if(!C||!D) return;
 
-                // 🚫 TRÁNSITO
-                if(D.toUpperCase().includes("TRANSITO")) return;
+            const n=D.replace(/\D/g,""); if(!n) return;
 
-                if(!C || !D) return;
-                const num = D.replace(/[^0-9]/g,"");
-                if(!num) return;
+            const nombre=limpiar(A?A+" ":"")+C;
+            const id=idProd(nombre);
+            const img=imgs[id];
 
-                const nombre = limpiarEmojis(A ? A+" " : "") + C;
-                const id = idProducto(nombre);
-                const img = imagenes[id];
-
-                const prod = document.createElement("div");
-                prod.className = "producto";
-                prod.innerHTML = `
-                    <div class="descripcion">${nombre}</div>
-                    ${img ? `<button class="btn-img" onclick="verImg('${img}')">📷</button>` : ""}
-                    <div class="precio">${formatearPrecio(num)}</div>
-                `;
-                cont.appendChild(prod);
-            });
+            const p=document.createElement("div");
+            p.className="producto";
+            p.innerHTML=`
+              <div class="descripcion">${nombre}</div>
+              ${img?`<button class="btn img-btn" onclick="verImg('${img}')">📷</button>`:""}
+              ${isAdmin?`<button class="btn admin-btn" onclick="editar('${id}')">✏️</button>`:""}
+              <div class="precio">${precio(n)}</div>
+            `;
+            cont.appendChild(p);
+          });
         }
+      });
     });
-});
-
-// ================== MODAL ==================
-function verImg(src){
-    modalImg.src = src;
-    modal.style.display="flex";
+  });
 }
+
+// ================= ADMIN EDIT =================
+function editar(id){
+  const img=prompt("Link público de imagen:",imgs[id]||"");
+  if(img===null) return;
+  if(!img) db.collection("products").doc(id).delete().then(cargar);
+  else db.collection("products").doc(id).set({image:img}).then(cargar);
+}
+
+// ================= MODAL =================
+function verImg(src){
+  imgModalSrc.src=src;
+  imgModal.style.display="flex";
+}
+
+cargar();
 </script>
 
 </body>
