@@ -7,159 +7,138 @@
 
 <style>
 body{
-    font-family:system-ui, Arial;
-    background:#0b0f19;
-    color:#e6ecff;
-    margin:0;
-    padding:20px;
+  font-family:system-ui, Arial;
+  background:#0b0f19;
+  color:#e6ecff;
+  margin:0;
+  padding:20px;
 }
-h1{margin-bottom:10px}
-input, button{
-    padding:10px;
-    border-radius:8px;
-    border:none;
-    margin:4px 0;
-    width:100%;
+.panel{
+  max-width:420px;
+  margin:auto;
+  background:#101624;
+  padding:20px;
+  border-radius:12px;
+  border:1px solid #1f2940;
+}
+input,button{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border-radius:8px;
+  border:none;
 }
 button{
-    cursor:pointer;
-    font-weight:700;
-}
-.login, .panel{
-    max-width:420px;
-    margin:auto;
-    background:#101624;
-    padding:20px;
-    border-radius:12px;
-    border:1px solid #1f2940;
+  font-weight:700;
+  cursor:pointer;
 }
 .producto{
-    border:1px solid #1f2940;
-    border-radius:10px;
-    padding:10px;
-    margin-top:10px;
+  margin-top:10px;
+  border:1px solid #1f2940;
+  padding:10px;
+  border-radius:8px;
 }
-.acciones{
-    display:flex;
-    gap:6px;
-}
-.acciones button{
-    flex:1;
-}
-.img-preview{
-    width:100%;
-    margin-top:6px;
-    border-radius:8px;
+img{
+  width:100%;
+  margin-top:6px;
+  border-radius:6px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="login" class="login">
-    <h1>Admin Login</h1>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-    <button onclick="login()">Entrar</button>
+<!-- LOGIN -->
+<div id="login" class="panel">
+  <h2>Admin Login</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Contraseña">
+  <button onclick="login()">Entrar</button>
 </div>
 
-<div id="panel" class="panel" style="display:none">
-    <h1>Productos</h1>
+<!-- PANEL -->
+<div id="admin" class="panel" style="display:none">
+  <h2>Agregar / Editar imagen</h2>
 
-    <input id="name" placeholder="Nombre del producto">
-    <input id="image" placeholder="Link público de imagen (Drive)">
-    <button onclick="guardar()">Guardar / Actualizar</button>
+  <input id="productName" placeholder="Nombre exacto del producto">
+  <input id="productImage" placeholder="Link público de imagen (Drive)">
+  <button onclick="guardar()">Guardar</button>
 
-    <div id="lista"></div>
+  <h3>Productos con imagen</h3>
+  <div id="lista"></div>
+
+  <button style="margin-top:20px" onclick="logout()">Salir</button>
 </div>
 
-<!-- Firebase -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <script>
-// =====================
-// HELPERS
-// =====================
-function limpiarEmojis(txt){
-    return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
+// ========= HELPERS =========
+function idProducto(text){
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/(^-|-$)/g,"");
 }
 
-function productId(text){
-    return limpiarEmojis(text)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g,"-")
-        .replace(/(^-|-$)/g,"");
-}
-
-// =====================
-// AUTH
-// =====================
+// ========= AUTH =========
 function login(){
-    auth.signInWithEmailAndPassword(
-        email.value,
-        password.value
-    ).catch(alert);
+  auth.signInWithEmailAndPassword(
+    email.value,
+    password.value
+  ).catch(e=>alert(e.message));
+}
+
+function logout(){
+  auth.signOut();
 }
 
 auth.onAuthStateChanged(user=>{
-    if(user){
-        login.style.display="none";
-        panel.style.display="block";
-        cargar();
-    }
+  login.style.display = user ? "none" : "block";
+  admin.style.display = user ? "block" : "none";
+  if(user) cargar();
 });
 
-// =====================
-// CRUD
-// =====================
+// ========= CRUD =========
 function guardar(){
-    const nombre = name.value.trim();
-    const img = image.value.trim();
-    if(!nombre) return alert("Nombre requerido");
+  const name = productName.value.trim();
+  const image = productImage.value.trim();
+  if(!name) return alert("Nombre requerido");
 
-    const id = productId(nombre);
-
-    db.collection("products").doc(id).set({
-        image: img || ""
-    }).then(()=>{
-        name.value="";
-        image.value="";
-        cargar();
+  db.collection("products")
+    .doc(idProducto(name))
+    .set({ image })
+    .then(()=>{
+      productName.value="";
+      productImage.value="";
+      cargar();
     });
 }
 
 function cargar(){
-    lista.innerHTML="";
-    db.collection("products").get().then(snap=>{
-        snap.forEach(doc=>{
-            const d = doc.data();
-            const div = document.createElement("div");
-            div.className="producto";
-            div.innerHTML=`
-                <strong>${doc.id}</strong>
-                ${d.image ? `<img class="img-preview" src="${d.image}">` : ""}
-                <div class="acciones">
-                    <button onclick="editar('${doc.id}','${d.image||""}')">Editar</button>
-                    <button onclick="borrar('${doc.id}')">Borrar</button>
-                </div>
-            `;
-            lista.appendChild(div);
-        });
+  lista.innerHTML="";
+  db.collection("products").get().then(snap=>{
+    snap.forEach(doc=>{
+      const d = doc.data();
+      const div = document.createElement("div");
+      div.className="producto";
+      div.innerHTML=`
+        <strong>${doc.id}</strong>
+        ${d.image ? `<img src="${d.image}">` : ""}
+        <button onclick="borrar('${doc.id}')">Borrar</button>
+      `;
+      lista.appendChild(div);
     });
-}
-
-function editar(id,img){
-    name.value = id.replace(/-/g," ");
-    image.value = img;
-    window.scrollTo(0,0);
+  });
 }
 
 function borrar(id){
-    if(!confirm("¿Borrar este producto?")) return;
-    db.collection("products").doc(id).delete().then(cargar);
+  if(!confirm("¿Eliminar imagen?")) return;
+  db.collection("products").doc(id).delete().then(cargar);
 }
 </script>
 
