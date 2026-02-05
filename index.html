@@ -171,6 +171,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            flex: 1;
         }
         
         .descripcion {
@@ -335,6 +336,65 @@
             transform: rotate(90deg);
         }
         
+        .login-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+        }
+        
+        .login-modal.active {
+            display: flex;
+        }
+        
+        .login-box {
+            background: rgba(20, 25, 40, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+        }
+        
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #00c2ff;
+            font-weight: 700;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(100, 120, 180, 0.6);
+            background: rgba(10, 15, 30, 0.8);
+            color: white;
+            margin: 10px 0;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: #00c2ff;
+            box-shadow: 0 0 0 3px rgba(0, 194, 255, 0.2);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, #00c2ff, #0077ff);
+            color: white;
+            font-weight: 700;
+            margin-top: 15px;
+            font-size: 1.05rem;
+        }
+        
         .loading {
             text-align: center;
             padding: 40px;
@@ -465,9 +525,18 @@
         </div>
     </div>
     
+    <div id="loginModal" class="login-modal">
+        <div class="login-box">
+            <h2>Acceso de Administrador</h2>
+            <input type="email" id="adminEmail" class="login-input" placeholder="Correo electrónico" required>
+            <input type="password" id="adminPassword" class="login-input" placeholder="Contraseña" required>
+            <button id="submitLogin" class="btn btn-login">Iniciar Sesión</button>
+        </div>
+    </div>
+    
     <footer>
         <p>Trifusion Technologies © 2026 - Todos los derechos reservados</p>
-        <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Catálogo actualizado en tiempo real desde Google Sheets</p>
+        <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Catálogo actualizado en tiempo real</p>
     </footer>
 
     <!-- Firebase SDK -->
@@ -479,7 +548,7 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     
     <script>
-        // Firebase configuration - USANDO TU CONFIGURACIÓN REAL
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDlOJqBgd-8KqUT-Y94lsma5W8T79PsPjM",
             authDomain: "trifusion-cotizador.firebaseapp.com",
@@ -501,12 +570,15 @@
         const cont = document.getElementById("catalogo");
         const loginBtn = document.getElementById("loginBtn");
         const logoutBtn = document.getElementById("logoutBtn");
+        const loginModal = document.getElementById("loginModal");
+        const submitLogin = document.getElementById("submitLogin");
         const imageModal = document.getElementById("imageModal");
         const modalImage = document.getElementById("modalImage");
         const closeModal = document.querySelector(".close-modal");
         
         let isAdmin = false;
         let productImages = {};
+        let sheetData = [];
         
         // Initialize the application
         function init() {
@@ -519,8 +591,9 @@
             });
             
             // Set up button event listeners
-            loginBtn.onclick = showLogin;
+            loginBtn.onclick = () => loginModal.classList.add("active");
             logoutBtn.onclick = () => auth.signOut();
+            submitLogin.onclick = handleLogin;
             closeModal.onclick = () => imageModal.classList.remove("active");
             imageModal.onclick = (e) => {
                 if (e.target === imageModal) {
@@ -528,31 +601,41 @@
                 }
             };
             
+            // Close login modal when clicking outside
+            loginModal.onclick = (e) => {
+                if (e.target === loginModal) {
+                    loginModal.classList.remove("active");
+                }
+            };
+            
             // Load catalog initially
             loadCatalog();
         }
         
-        // Show login prompt
-        function showLogin() {
-            const email = prompt("📧 Correo electrónico de administrador:");
-            const password = prompt("🔒 Contraseña:");
+        // Handle login
+        function handleLogin() {
+            const email = document.getElementById("adminEmail").value.trim();
+            const password = document.getElementById("adminPassword").value.trim();
             
-            if (email && password) {
-                auth.signInWithEmailAndPassword(email, password)
-                    .catch(error => {
-                        let message = "Error al iniciar sesión. ";
-                        if (error.code === "auth/invalid-email") {
-                            message += "Correo electrónico inválido.";
-                        } else if (error.code === "auth/wrong-password") {
-                            message += "Contraseña incorrecta.";
-                        } else if (error.code === "auth/user-not-found") {
-                            message += "Usuario no encontrado.";
-                        } else {
-                            message += error.message;
-                        }
-                        alert(message);
-                    });
+            if (!email || !password) {
+                alert("Por favor ingresa correo y contraseña");
+                return;
             }
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    let message = "Error al iniciar sesión. ";
+                    if (error.code === "auth/invalid-email") {
+                        message += "Correo electrónico inválido.";
+                    } else if (error.code === "auth/wrong-password") {
+                        message += "Contraseña incorrecta.";
+                    } else if (error.code === "auth/user-not-found") {
+                        message += "Usuario no encontrado.";
+                    } else {
+                        message += error.message;
+                    }
+                    alert(message);
+                });
         }
         
         // Clean text (remove emojis and trim)
@@ -612,8 +695,10 @@
                     skipEmptyLines: true
                 });
                 
+                sheetData = results.data;
+                
                 // Render catalog
-                renderCatalog(results.data);
+                renderCatalog();
                 
             } catch (error) {
                 console.error("Error loading catalog:", error);
@@ -626,10 +711,10 @@
         }
         
         // Render catalog from CSV data
-        function renderCatalog(rows) {
+        function renderCatalog() {
             cont.innerHTML = "";
             
-            rows.forEach(row => {
+            sheetData.forEach((row, index) => {
                 const A = (row[0] || "").trim();
                 const C = (row[2] || "").trim(); // Product name/model
                 const D = (row[3] || "").trim(); // Price
@@ -651,34 +736,55 @@
                 const cleanName = limpiarEmojis(C);
                 const productId = generateProductId(cleanName);
                 
-                // Get image URL if exists
+                // Get product data if exists
                 const productData = productImages[productId] || {};
                 const imageUrl = productData.imageUrl || "";
+                const customPrice = productData.customPrice || D; // Use custom price if exists
                 
                 // Create product element
                 const prodEl = document.createElement("div");
                 prodEl.className = "producto";
-                prodEl.innerHTML = `
+                prodEl.dataset.productId = productId;
+                prodEl.dataset.rowIndex = index;
+                
+                // Product content
+                let productHTML = `
                     <div class="producto-content">
                         <div class="descripcion">${cleanName}</div>
-                        <div class="precio">${formatearPrecio(D)}</div>
+                        <div class="precio">${formatearPrecio(customPrice)}</div>
                     </div>
-                    ${imageUrl ? `
+                `;
+                
+                // Add image if exists
+                if (imageUrl) {
+                    productHTML += `
                     <div class="producto-img-container">
                         <img src="${imageUrl}" alt="${cleanName}" class="producto-img">
                     </div>
-                    ` : ''}
-                    ${isAdmin ? `
-                    <div class="admin-section">
+                    `;
+                }
+                
+                // Add admin section if admin
+                if (isAdmin) {
+                    productHTML += `
+                    <div class="admin-section active">
                         <h4>📸 Imagen del Producto</h4>
                         <input type="text" class="admin-input image-url" placeholder="Pega URL pública de imagen" value="${imageUrl}">
                         <div class="admin-actions">
                             <button class="btn btn-save save-image">💾 Guardar Imagen</button>
-                            ${imageUrl ? `<button class="btn btn-delete delete-image">🗑️ Eliminar</button>` : ''}
+                            ${imageUrl ? `<button class="btn btn-delete delete-image">🗑️ Eliminar Imagen</button>` : ''}
+                        </div>
+                        <h4 style="margin-top: 15px">💰 Precio Personalizado</h4>
+                        <input type="text" class="admin-input custom-price" placeholder="Precio personalizado (ej: 29499)" value="${productData.customPrice || ''}">
+                        <div class="admin-actions">
+                            <button class="btn btn-save save-price">💾 Guardar Precio</button>
+                            ${productData.customPrice ? `<button class="btn btn-delete delete-price">🗑️ Restaurar Original</button>` : ''}
                         </div>
                     </div>
-                    ` : ''}
-                `;
+                    `;
+                }
+                
+                prodEl.innerHTML = productHTML;
                 
                 // Add image click handler if image exists
                 if (imageUrl) {
@@ -692,13 +798,18 @@
                 
                 // Add admin event listeners if in admin mode
                 if (isAdmin) {
-                    const saveBtn = prodEl.querySelector(".save-image");
-                    const deleteBtn = prodEl.querySelector(".delete-image");
-                    const urlInput = prodEl.querySelector(".image-url");
+                    const saveImageBtn = prodEl.querySelector(".save-image");
+                    const deleteImageBtn = prodEl.querySelector(".delete-image");
+                    const imageUrlInput = prodEl.querySelector(".image-url");
                     
-                    if (saveBtn) {
-                        saveBtn.onclick = async () => {
-                            const url = urlInput.value.trim();
+                    const savePriceBtn = prodEl.querySelector(".save-price");
+                    const deletePriceBtn = prodEl.querySelector(".delete-price");
+                    const priceInput = prodEl.querySelector(".custom-price");
+                    
+                    // Image handlers
+                    if (saveImageBtn) {
+                        saveImageBtn.onclick = async () => {
+                            const url = imageUrlInput.value.trim();
                             if (!url) {
                                 alert("Por favor ingresa una URL válida");
                                 return;
@@ -708,22 +819,9 @@
                                 await db.collection("products").doc(productId).set({
                                     imageUrl: url,
                                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                });
+                                }, { merge: true });
                                 
-                                // Show success message
-                                cont.insertAdjacentHTML("afterbegin", `
-                                    <div class="status-message status-success">
-                                        ✅ Imagen guardada exitosamente para "${cleanName}"
-                                    </div>
-                                `);
-                                
-                                // Auto-hide message after 3 seconds
-                                setTimeout(() => {
-                                    const msg = document.querySelector(".status-success");
-                                    if (msg) msg.remove();
-                                }, 3000);
-                                
-                                // Reload catalog
+                                showStatus(`✅ Imagen guardada exitosamente para "${cleanName}"`, true);
                                 loadCatalog();
                             } catch (error) {
                                 console.error("Error saving image:", error);
@@ -732,27 +830,17 @@
                         };
                     }
                     
-                    if (deleteBtn) {
-                        deleteBtn.onclick = async () => {
+                    if (deleteImageBtn) {
+                        deleteImageBtn.onclick = async () => {
                             if (!confirm(`¿Eliminar la imagen de "${cleanName}"?`)) return;
                             
                             try {
-                                await db.collection("products").doc(productId).delete();
+                                await db.collection("products").doc(productId).update({
+                                    imageUrl: firebase.firestore.FieldValue.delete(),
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
                                 
-                                // Show success message
-                                cont.insertAdjacentHTML("afterbegin", `
-                                    <div class="status-message status-success">
-                                        ✅ Imagen eliminada exitosamente para "${cleanName}"
-                                    </div>
-                                `);
-                                
-                                // Auto-hide message after 3 seconds
-                                setTimeout(() => {
-                                    const msg = document.querySelector(".status-success");
-                                    if (msg) msg.remove();
-                                }, 3000);
-                                
-                                // Reload catalog
+                                showStatus(`✅ Imagen eliminada exitosamente para "${cleanName}"`, true);
                                 loadCatalog();
                             } catch (error) {
                                 console.error("Error deleting image:", error);
@@ -760,10 +848,77 @@
                             }
                         };
                     }
+                    
+                    // Price handlers
+                    if (savePriceBtn) {
+                        savePriceBtn.onclick = async () => {
+                            const price = priceInput.value.trim();
+                            if (!price) {
+                                alert("Por favor ingresa un precio válido");
+                                return;
+                            }
+                            
+                            // Validate price format
+                            if (!/^\d+$/.test(price.replace(/[^0-9]/g, ""))) {
+                                alert("El precio debe contener solo números");
+                                return;
+                            }
+                            
+                            try {
+                                await db.collection("products").doc(productId).set({
+                                    customPrice: price,
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                }, { merge: true });
+                                
+                                showStatus(`✅ Precio personalizado guardado para "${cleanName}"`, true);
+                                loadCatalog();
+                            } catch (error) {
+                                console.error("Error saving price:", error);
+                                alert("Error al guardar el precio: " + error.message);
+                            }
+                        };
+                    }
+                    
+                    if (deletePriceBtn) {
+                        deletePriceBtn.onclick = async () => {
+                            if (!confirm(`¿Restaurar el precio original de "${cleanName}"?`)) return;
+                            
+                            try {
+                                await db.collection("products").doc(productId).update({
+                                    customPrice: firebase.firestore.FieldValue.delete(),
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                
+                                showStatus(`✅ Precio original restaurado para "${cleanName}"`, true);
+                                loadCatalog();
+                            } catch (error) {
+                                console.error("Error deleting price:", error);
+                                alert("Error al restaurar el precio: " + error.message);
+                            }
+                        };
+                    }
                 }
                 
                 cont.appendChild(prodEl);
             });
+        }
+        
+        // Show status message
+        function showStatus(message, isSuccess) {
+            // Remove existing messages
+            const existing = document.querySelector(".status-message");
+            if (existing) existing.remove();
+            
+            // Create new message
+            const msg = document.createElement("div");
+            msg.className = `status-message ${isSuccess ? 'status-success' : 'status-error'}`;
+            msg.innerHTML = message;
+            cont.insertBefore(msg, cont.firstChild);
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                if (msg.parentNode) msg.parentNode.removeChild(msg);
+            }, 3000);
         }
         
         // Initialize the app when page loads
@@ -775,23 +930,17 @@
 
 
               <script>
-                              rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Productos: público puede leer, admin puede escribir
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // Configuración general
-    match /settings/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-  }
-}
-
+                                 rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /products/{productId} {
+         allow read: if true;
+         allow write: if request.auth != null;
+       }
+       // ... tus otras reglas existentes
+     }
+   }
+   
 
               </script>
                         </body>
