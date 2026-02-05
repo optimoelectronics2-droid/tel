@@ -1,200 +1,745 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Trifusion Technologies — Catálogo</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body{
-    margin:0;
-    font-family:system-ui, Arial;
-    background:#0b0f19;
-    color:#e6ecff;
-}
-header{
-    padding:18px;
-    background:#000;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-button{
-    background:#00c2ff;
-    border:none;
-    padding:8px 14px;
-    border-radius:8px;
-    font-weight:700;
-    cursor:pointer;
-}
-.catalogo{
-    max-width:1100px;
-    margin:30px auto;
-    padding:0 16px;
-}
-.categoria{
-    margin:26px 0 14px;
-    padding:14px 18px;
-    background:rgba(0,194,255,.25);
-    border-left:6px solid #00c2ff;
-    font-weight:800;
-    letter-spacing:.18em;
-}
-.producto{
-    background:#101624;
-    border:1px solid #1f2940;
-    border-radius:12px;
-    padding:14px;
-    margin-bottom:10px;
-}
-.descripcion{
-    color:#00c2ff;
-    font-weight:600;
-}
-.precio{
-    color:#ff4b6a;
-    font-weight:700;
-}
-img{
-    max-width:160px;
-    border-radius:8px;
-    margin-top:10px;
-}
-.admin{
-    margin-top:10px;
-}
-input{
-    width:100%;
-    padding:6px;
-    margin-top:6px;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>Trifusion Technologies — Catálogo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0e17 0%, #1a1f2e 100%);
+            color: #e6ecff;
+            line-height: 1.6;
+        }
+        
+        header {
+            padding: 20px 16px;
+            background: rgba(0, 0, 0, 0.85);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #00c2ff, #0077ff, #7b3fe4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        
+        .admin-controls-header {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn-admin {
+            background: linear-gradient(90deg, #ff8a00, #da4a00);
+            color: white;
+        }
+        
+        .btn-admin:hover {
+            background: linear-gradient(90deg, #ff9a20, #e55a10);
+            box-shadow: 0 0 15px rgba(255, 138, 0, 0.4);
+        }
+        
+        .btn-logout {
+            background: linear-gradient(90deg, #ff4b6a, #c53030);
+            color: white;
+            display: none;
+        }
+        
+        .btn-logout:hover {
+            background: linear-gradient(90deg, #ff5b7a, #d54040);
+            box-shadow: 0 0 15px rgba(255, 75, 106, 0.4);
+        }
+        
+        .catalogo {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .categoria {
+            margin: 32px 0 20px;
+            padding: 16px 22px;
+            background: rgba(0, 30, 60, 0.7);
+            border-left: 6px solid #00c2ff;
+            border-radius: 0 12px 12px 0;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0, 194, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .categoria::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(90deg, transparent, rgba(0, 194, 255, 0.1), transparent);
+            z-index: -1;
+        }
+        
+        .producto {
+            background: rgba(16, 22, 36, 0.85);
+            border: 1px solid rgba(31, 41, 64, 0.9);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .producto:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 194, 255, 0.4);
+            box-shadow: 0 8px 25px rgba(0, 194, 255, 0.2);
+        }
+        
+        .producto::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00c2ff, #7b3fe4, #ff4b6a);
+            opacity: 0.7;
+        }
+        
+        .descripcion {
+            color: #4da6ff;
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 4px;
+        }
+        
+        .precio {
+            color: #ff4b6a;
+            font-weight: 800;
+            font-size: 1.5rem;
+            white-space: nowrap;
+            margin-top: 4px;
+        }
+        
+        .producto-img {
+            width: 100%;
+            max-height: 220px;
+            object-fit: contain;
+            border-radius: 12px;
+            background: rgba(2, 3, 10, 0.8);
+            border: 1px solid rgba(31, 41, 64, 0.7);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            display: block;
+            margin: 10px auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .producto-img:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(0, 194, 255, 0.3);
+        }
+        
+        .admin-section {
+            background: rgba(30, 25, 50, 0.8);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            border: 1px solid rgba(100, 80, 180, 0.5);
+        }
+        
+        .admin-section h4 {
+            color: #ffb703;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .admin-input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(100, 120, 180, 0.6);
+            background: rgba(10, 15, 30, 0.8);
+            color: white;
+            margin: 8px 0;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        
+        .admin-input:focus {
+            outline: none;
+            border-color: #00c2ff;
+            box-shadow: 0 0 0 3px rgba(0, 194, 255, 0.2);
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .btn-save {
+            flex: 1;
+            background: linear-gradient(90deg, #00c853, #009629);
+            color: white;
+        }
+        
+        .btn-save:hover {
+            background: linear-gradient(90deg, #00e05d, #00aa30);
+            box-shadow: 0 0 15px rgba(0, 200, 83, 0.3);
+        }
+        
+        .btn-delete {
+            flex: 1;
+            background: linear-gradient(90deg, #ff4b6a, #c53030);
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: linear-gradient(90deg, #ff5b7a, #d54040);
+            box-shadow: 0 0 15px rgba(255, 75, 106, 0.4);
+        }
+        
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 16px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow: hidden;
+            background: rgba(16, 22, 36, 0.95);
+            border: 2px solid rgba(0, 194, 255, 0.5);
+        }
+        
+        .modal-img {
+            max-width: 100%;
+            max-height: 85vh;
+            display: block;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(30, 30, 40, 0.8);
+            border: 2px solid #ff4b6a;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 2001;
+        }
+        
+        .close-modal:hover {
+            background: #ff4b6a;
+            transform: rotate(90deg);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #00c2ff;
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .status-success {
+            background: rgba(0, 100, 0, 0.3);
+            border: 1px solid #00c853;
+            color: #4cff9a;
+            display: block;
+        }
+        
+        .status-error {
+            background: rgba(100, 0, 0, 0.3);
+            border: 1px solid #ff4b6a;
+            color: #ff8a9a;
+            display: block;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 25px;
+            margin-top: 20px;
+            color: rgba(230, 236, 255, 0.6);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(31, 41, 64, 0.7);
+            background: rgba(10, 15, 25, 0.7);
+        }
+        
+        @media (min-width: 768px) {
+            .producto {
+                flex-direction: row;
+                align-items: center;
+            }
+            
+            .producto-content {
+                flex: 1;
+            }
+            
+            .producto-img-container {
+                width: 220px;
+                height: 220px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            
+            .producto-img {
+                max-width: 100%;
+                max-height: 100%;
+                margin: 0;
+            }
+            
+            .admin-section {
+                margin-top: 0;
+                margin-left: 20px;
+                width: 300px;
+                flex-shrink: 0;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .admin-controls-header {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .btn {
+                width: 100%;
+                padding: 12px;
+                font-size: 1.05rem;
+            }
+            
+            .categoria {
+                font-size: 1.1rem;
+                padding: 14px 18px;
+            }
+            
+            .producto {
+                padding: 16px;
+            }
+            
+            .descripcion {
+                font-size: 1.15rem;
+            }
+            
+            .precio {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
 </head>
-
 <body>
+    <header>
+        <h1>Trifusion Technologies</h1>
+        <div class="admin-controls-header">
+            <button id="loginBtn" class="btn btn-admin">🔐 Modo Admin</button>
+            <button id="logoutBtn" class="btn btn-logout">👋 Salir</button>
+        </div>
+    </header>
+    
+    <div class="catalogo" id="catalogo">
+        <div class="loading">Cargando catálogo...</div>
+    </div>
+    
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <img id="modalImage" class="modal-img" src="" alt="Imagen del producto">
+        </div>
+    </div>
+    
+    <footer>
+        <p>Trifusion Technologies © 2026 - Todos los derechos reservados</p>
+        <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Catálogo actualizado en tiempo real desde Google Sheets</p>
+    </footer>
 
-<header>
-  <h2>Trifusion Technologies</h2>
-  <div>
-    <button id="loginBtn">Admin</button>
-    <button id="logoutBtn" style="display:none;">Salir</button>
-  </div>
-</header>
-
-<div class="catalogo" id="catalogo"></div>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-<script src="firebase-config.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-<script>
-const SHEET_ID="1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
-const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
-
-const auth=firebase.auth();
-const db=firebase.firestore();
-let isAdmin=false;
-
-auth.onAuthStateChanged(u=>{
-  isAdmin=!!u;
-  loginBtn.style.display=isAdmin?"none":"inline";
-  logoutBtn.style.display=isAdmin?"inline":"none";
-  cargarCatalogo();
-});
-
-loginBtn.onclick=()=>{
-  const e=prompt("Email admin:");
-  const p=prompt("Password:");
-  auth.signInWithEmailAndPassword(e,p).catch(a=>alert(a.message));
-};
-logoutBtn.onclick=()=>auth.signOut();
-
-function slug(t){
-  return t.toLowerCase()
-  .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-  .replace(/[^a-z0-9]+/g,"-");
-}
-
-function limpiar(txt){
-  return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu,"").trim();
-}
-
-function esCategoria(row){
-  const filled=row.filter(c=>(c||"").trim());
-  if(filled.length!==1) return false;
-  const t=filled[0];
-  return !/\d/.test(t) && t.length<16;
-}
-
-async function cargarCatalogo(){
-  const cont=document.getElementById("catalogo");
-  cont.innerHTML="";
-
-  const res=await fetch(CSV_URL);
-  const csv=await res.text();
-
-  Papa.parse(csv,{
-    skipEmptyLines:true,
-    complete: async r=>{
-      for(const row of r.data){
-        const A=(row[0]||"").trim();
-        const C=(row[2]||"").trim();
-        const D=(row[3]||"").trim();
-
-        if(esCategoria(row)){
-          const div=document.createElement("div");
-          div.className="categoria";
-          div.textContent=limpiar(row.find(c=>c));
-          cont.appendChild(div);
-          continue;
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    
+    <script>
+        // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY_AQUI",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            projectId: "tu-proyecto"
+        };
+        
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
-
-        if(!C||!D||D.toUpperCase().includes("TRANSITO")) continue;
-
-        const id=slug(C);
-        const doc=await db.collection("products").doc(id).get();
-        const img=doc.exists?doc.data().imageUrl:null;
-
-        const p=document.createElement("div");
-        p.className="producto";
-        p.innerHTML=`
-          <div class="descripcion">${limpiar(C)}</div>
-          <div class="precio">$${D.replace(/[^0-9]/g,"")}</div>
-          ${img?`<img src="${img}">`:""}
-          ${isAdmin?`
-            <div class="admin">
-              <input placeholder="Link imagen pública" value="${img||""}">
-              <button>Guardar imagen</button>
-              ${img?`<button>Eliminar</button>`:""}
-            </div>`:""}
-        `;
-        cont.appendChild(p);
-
-        if(isAdmin){
-          const input=p.querySelector("input");
-          const btn=p.querySelector("button");
-          btn.onclick=()=>{
-            db.collection("products").doc(id)
-              .set({imageUrl:input.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-          };
-          const del=p.querySelectorAll("button")[1];
-          if(del) del.onclick=()=>{
-            db.collection("products").doc(id).delete();
-            cargarCatalogo();
-          };
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const SHEET_ID = "1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+        const cont = document.getElementById("catalogo");
+        const loginBtn = document.getElementById("loginBtn");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const imageModal = document.getElementById("imageModal");
+        const modalImage = document.getElementById("modalImage");
+        const closeModal = document.querySelector(".close-modal");
+        
+        let isAdmin = false;
+        let productImages = {};
+        
+        // Initialize the application
+        function init() {
+            // Set up auth state observer
+            auth.onAuthStateChanged(user => {
+                isAdmin = !!user;
+                loginBtn.style.display = isAdmin ? "none" : "inline-flex";
+                logoutBtn.style.display = isAdmin ? "inline-flex" : "none";
+                loadCatalog();
+            });
+            
+            // Set up button event listeners
+            loginBtn.onclick = showLogin;
+            logoutBtn.onclick = () => auth.signOut();
+            closeModal.onclick = () => imageModal.classList.remove("active");
+            imageModal.onclick = (e) => {
+                if (e.target === imageModal) {
+                    imageModal.classList.remove("active");
+                }
+            };
+            
+            // Load catalog initially
+            loadCatalog();
         }
-      }
-    }
-  });
-}
-
-cargarCatalogo();
-</script>
-
+        
+        // Show login prompt
+        function showLogin() {
+            const email = prompt("📧 Correo electrónico de administrador:");
+            const password = prompt("🔒 Contraseña:");
+            
+            if (email && password) {
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(error => {
+                        let message = "Error al iniciar sesión. ";
+                        if (error.code === "auth/invalid-email") {
+                            message += "Correo electrónico inválido.";
+                        } else if (error.code === "auth/wrong-password") {
+                            message += "Contraseña incorrecta.";
+                        } else if (error.code === "auth/user-not-found") {
+                            message += "Usuario no encontrado.";
+                        } else {
+                            message += error.message;
+                        }
+                        alert(message);
+                    });
+            }
+        }
+        
+        // Clean text (remove emojis and trim)
+        function limpiarEmojis(txt) {
+            return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
+        }
+        
+        // Generate product ID from name
+        function generateProductId(name) {
+            return limpiarEmojis(name)
+                .toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)/g, "");
+        }
+        
+        // Check if row is a category
+        function esCategoria(row) {
+            const nonEmptyCells = row.filter(cell => (cell || "").trim() !== "");
+            if (nonEmptyCells.length !== 1) return false;
+            
+            const text = nonEmptyCells[0].trim();
+            if (/\d/.test(text)) return false; // Contains numbers
+            if (text.length > 15) return false; // Too long
+            if (text.toUpperCase().includes("TRANSITO")) return false;
+            
+            return true;
+        }
+        
+        // Format price
+        function formatearPrecio(precioStr) {
+            const num = precioStr.replace(/[^0-9]/g, "");
+            if (!num) return "";
+            return "$" + Number(num).toLocaleString("es-DO");
+        }
+        
+        // Load catalog data
+        async function loadCatalog() {
+            try {
+                cont.innerHTML = '<div class="loading">Cargando productos...</div>';
+                
+                // Fetch CSV and Firestore data in parallel
+                const [csvResponse, productsSnapshot] = await Promise.all([
+                    fetch(CSV_URL),
+                    db.collection("products").get()
+                ]);
+                
+                // Process Firestore data
+                productImages = {};
+                productsSnapshot.forEach(doc => {
+                    productImages[doc.id] = doc.data();
+                });
+                
+                // Process CSV data
+                const csvText = await csvResponse.text();
+                const results = Papa.parse(csvText, {
+                    skipEmptyLines: true
+                });
+                
+                // Render catalog
+                renderCatalog(results.data);
+                
+            } catch (error) {
+                console.error("Error loading catalog:", error);
+                cont.innerHTML = `
+                    <div class="status-message status-error">
+                        ❌ Error al cargar el catálogo. Por favor, recarga la página.
+                    </div>
+                `;
+            }
+        }
+        
+        // Render catalog from CSV data
+        function renderCatalog(rows) {
+            cont.innerHTML = "";
+            
+            rows.forEach(row => {
+                const A = (row[0] || "").trim();
+                const C = (row[2] || "").trim(); // Product name/model
+                const D = (row[3] || "").trim(); // Price
+                
+                // Render category row
+                if (esCategoria(row)) {
+                    const categoryText = limpiarEmojis(row.find(cell => (cell || "").trim()) || "");
+                    const catEl = document.createElement("div");
+                    catEl.className = "categoria";
+                    catEl.textContent = categoryText;
+                    cont.appendChild(catEl);
+                    return;
+                }
+                
+                // Skip "TRÁNSITO" items and invalid rows
+                if (D.toUpperCase().includes("TRANSITO") || !C || !D) return;
+                
+                // Clean product name and generate ID
+                const cleanName = limpiarEmojis(C);
+                const productId = generateProductId(cleanName);
+                
+                // Get image URL if exists
+                const productData = productImages[productId] || {};
+                const imageUrl = productData.imageUrl || "";
+                
+                // Create product element
+                const prodEl = document.createElement("div");
+                prodEl.className = "producto";
+                prodEl.innerHTML = `
+                    <div class="producto-content">
+                        <div class="descripcion">${cleanName}</div>
+                        <div class="precio">${formatearPrecio(D)}</div>
+                    </div>
+                    ${imageUrl ? `
+                    <div class="producto-img-container">
+                        <img src="${imageUrl}" alt="${cleanName}" class="producto-img">
+                    </div>
+                    ` : ''}
+                    ${isAdmin ? `
+                    <div class="admin-section">
+                        <h4>📸 Imagen del Producto</h4>
+                        <input type="text" class="admin-input image-url" placeholder="Pega URL pública de imagen" value="${imageUrl}">
+                        <div class="admin-actions">
+                            <button class="btn btn-save save-image">💾 Guardar Imagen</button>
+                            ${imageUrl ? `<button class="btn btn-delete delete-image">🗑️ Eliminar</button>` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+                
+                // Add image click handler if image exists
+                if (imageUrl) {
+                    const imgEl = prodEl.querySelector(".producto-img");
+                    imgEl.onclick = (e) => {
+                        e.stopPropagation();
+                        modalImage.src = imageUrl;
+                        imageModal.classList.add("active");
+                    };
+                }
+                
+                // Add admin event listeners if in admin mode
+                if (isAdmin) {
+                    const saveBtn = prodEl.querySelector(".save-image");
+                    const deleteBtn = prodEl.querySelector(".delete-image");
+                    const urlInput = prodEl.querySelector(".image-url");
+                    
+                    if (saveBtn) {
+                        saveBtn.onclick = async () => {
+                            const url = urlInput.value.trim();
+                            if (!url) {
+                                alert("Por favor ingresa una URL válida");
+                                return;
+                            }
+                            
+                            try {
+                                await db.collection("products").doc(productId).set({
+                                    imageUrl: url,
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                
+                                // Show success message
+                                cont.insertAdjacentHTML("afterbegin", `
+                                    <div class="status-message status-success">
+                                        ✅ Imagen guardada exitosamente para "${cleanName}"
+                                    </div>
+                                `);
+                                
+                                // Auto-hide message after 3 seconds
+                                setTimeout(() => {
+                                    const msg = document.querySelector(".status-success");
+                                    if (msg) msg.remove();
+                                }, 3000);
+                                
+                                // Reload catalog
+                                loadCatalog();
+                            } catch (error) {
+                                console.error("Error saving image:", error);
+                                alert("Error al guardar la imagen: " + error.message);
+                            }
+                        };
+                    }
+                    
+                    if (deleteBtn) {
+                        deleteBtn.onclick = async () => {
+                            if (!confirm(`¿Eliminar la imagen de "${cleanName}"?`)) return;
+                            
+                            try {
+                                await db.collection("products").doc(productId).delete();
+                                
+                                // Show success message
+                                cont.insertAdjacentHTML("afterbegin", `
+                                    <div class="status-message status-success">
+                                        ✅ Imagen eliminada exitosamente para "${cleanName}"
+                                    </div>
+                                `);
+                                
+                                // Auto-hide message after 3 seconds
+                                setTimeout(() => {
+                                    const msg = document.querySelector(".status-success");
+                                    if (msg) msg.remove();
+                                }, 3000);
+                                
+                                // Reload catalog
+                                loadCatalog();
+                            } catch (error) {
+                                console.error("Error deleting image:", error);
+                                alert("Error al eliminar la imagen: " + error.message);
+                            }
+                        };
+                    }
+                }
+                
+                cont.appendChild(prodEl);
+            });
+        }
+        
+        // Initialize the app when page loads
+        window.addEventListener("DOMContentLoaded", init);
+    </script>
 </body>
 </html>
+
