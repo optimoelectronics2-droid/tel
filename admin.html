@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Admin - Trifusion Technologies</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h2>Panel Administrador</h2>
+
+<div id="loginBox">
+  <input id="email" type="email" placeholder="Correo">
+  <input id="password" type="password" placeholder="Contraseña">
+  <button id="loginBtn">Entrar</button>
+</div>
+
+<div id="adminPanel" style="display:none">
+
+  <h3>Agregar producto</h3>
+
+  <div>
+    <label>Nombre del producto</label>
+    <input id="productName" type="text">
+  </div>
+
+  <div>
+    <label>Código / Modelo</label>
+    <input id="productCode" type="text">
+  </div>
+
+  <div>
+    <label>Categoría</label>
+    <input id="productCategory" type="text">
+  </div>
+
+  <div>
+    <label>Precio</label>
+    <input id="productPrice" type="number">
+  </div>
+
+  <!-- 🔥 ESTE ES EL DIV QUE PEDISTE, COMPLETO -->
+  <div>
+    <label>Imagen del producto (link público)</label>
+    <input
+      id="productImage"
+      type="text"
+      placeholder="https://drive.google.com/uc?export=view&id=XXXX"
+    >
+  </div>
+
+  <button id="saveProduct">Guardar producto</button>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+
+<script>
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const loginBox = document.getElementById("loginBox");
+const adminPanel = document.getElementById("adminPanel");
+
+// LOGIN
+document.getElementById("loginBtn").onclick = () => {
+  auth.signInWithEmailAndPassword(
+    email.value,
+    password.value
+  ).catch(e => alert(e.message));
+};
+
+// AUTH STATE
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loginBox.style.display = "none";
+    adminPanel.style.display = "block";
+  }else{
+    loginBox.style.display = "block";
+    adminPanel.style.display = "none";
+  }
+});
+
+// GUARDAR PRODUCTO
+document.getElementById("saveProduct").onclick = async () => {
+  const name = productName.value.trim();
+  const code = productCode.value.trim();
+  const category = productCategory.value.trim();
+  const price = Number(productPrice.value);
+  const image = productImage.value.trim();
+
+  if(!name || !price){
+    alert("Nombre y precio son obligatorios");
+    return;
+  }
+
+  await db.collection("products").add({
+    name,
+    code,
+    category,
+    price,
+    image: image || null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  alert("Producto guardado");
+
+  productName.value = "";
+  productCode.value = "";
+  productCategory.value = "";
+  productPrice.value = "";
+  productImage.value = "";
+};
+</script>
+
+</body>
+</html>

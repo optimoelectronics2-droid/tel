@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Trifusion Technologies</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h1>Catálogo</h1>
+
+<div id="catalogo"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+
+<script>
+const db = firebase.firestore();
+const catalogo = document.getElementById("catalogo");
+
+db.collection("products")
+.orderBy("createdAt","desc")
+.onSnapshot(snap=>{
+  catalogo.innerHTML = "";
+
+  snap.forEach(doc=>{
+    const p = doc.data();
+
+    const card = document.createElement("div");
+    card.className = "producto";
+
+    card.innerHTML = `
+      ${p.image ? `
+        <img src="${p.image}" style="
+          width:120px;
+          height:120px;
+          object-fit:contain;
+          border-radius:10px;
+          background:#0b0f19;
+        ">
+      ` : ""}
+
+      <div>
+        <div class="descripcion">${p.name}</div>
+        <div class="precio">$${p.price.toLocaleString("es-DO")}</div>
+      </div>
+    `;
+
+    catalogo.appendChild(card);
+  });
+});
+</script>
+
+</body>
+</html>
