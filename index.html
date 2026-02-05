@@ -6,20 +6,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{margin:0;font-family:system-ui;background:#0b0f19;color:#e6ecff}
-header{background:#000;padding:14px;display:flex;justify-content:space-between;align-items:center}
-.catalogo{max-width:1100px;margin:20px auto;padding:0 16px}
-.categoria{margin:24px 0 10px;padding:12px;background:#00394d;font-weight:800}
-.producto{background:#101624;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;gap:8px;align-items:center}
-.descripcion{flex:1;color:#00c2ff;font-weight:600}
-.precio{color:#ff4b6a;font-weight:700}
-.btn{border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:700}
-.admin{background:#ffb703;color:#000}
-.img{background:#00c2ff;color:#000}
-.modal,.login{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:1000}
-.modal img{max-width:90%;max-height:90%}
-.login-box{background:#101624;padding:20px;border-radius:10px;width:280px}
-.login-box input{width:100%;padding:8px;margin-top:8px}
+body{
+    margin:0;
+    font-family:system-ui, Arial;
+    background:#0b0f19;
+    color:#e6ecff;
+}
+header{
+    padding:18px;
+    background:#000;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+button{
+    background:#00c2ff;
+    border:none;
+    padding:8px 14px;
+    border-radius:8px;
+    font-weight:700;
+    cursor:pointer;
+}
+.catalogo{
+    max-width:1100px;
+    margin:30px auto;
+    padding:0 16px;
+}
+.categoria{
+    margin:26px 0 14px;
+    padding:14px 18px;
+    background:rgba(0,194,255,.25);
+    border-left:6px solid #00c2ff;
+    font-weight:800;
+    letter-spacing:.18em;
+}
+.producto{
+    background:#101624;
+    border:1px solid #1f2940;
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:10px;
+}
+.descripcion{
+    color:#00c2ff;
+    font-weight:600;
+}
+.precio{
+    color:#ff4b6a;
+    font-weight:700;
+}
+img{
+    max-width:160px;
+    border-radius:8px;
+    margin-top:10px;
+}
+.admin{
+    margin-top:10px;
+}
+input{
+    width:100%;
+    padding:6px;
+    margin-top:6px;
+}
 </style>
 </head>
 
@@ -27,117 +75,126 @@ header{background:#000;padding:14px;display:flex;justify-content:space-between;a
 
 <header>
   <h2>Trifusion Technologies</h2>
-  <button id="adminBtn" class="btn admin">ADMIN</button>
+  <div>
+    <button id="loginBtn">Admin</button>
+    <button id="logoutBtn" style="display:none;">Salir</button>
+  </div>
 </header>
 
-<div id="catalogo" class="catalogo"></div>
+<div class="catalogo" id="catalogo"></div>
 
-<!-- MODALES -->
-<div id="imgModal" class="modal" onclick="this.style.display='none'">
-  <img id="imgView">
-</div>
-
-<div id="login" class="login">
-  <div class="login-box">
-    <h3>Admin</h3>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password">
-    <button class="btn admin" onclick="login()">Entrar</button>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
 <script src="firebase-config.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
 const SHEET_ID="1EtOwxNRGq0WFgGaRXtJgibUqzxIgcAUeRkJlr1wPsLc";
 const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
-const cont=document.getElementById("catalogo");
-let isAdmin=false;
-let images={};
 
-adminBtn.onclick=()=>login.style.display="flex";
+const auth=firebase.auth();
+const db=firebase.firestore();
+let isAdmin=false;
 
 auth.onAuthStateChanged(u=>{
   isAdmin=!!u;
-  login.style.display="none";
-  cargar();
+  loginBtn.style.display=isAdmin?"none":"inline";
+  logoutBtn.style.display=isAdmin?"inline":"none";
+  cargarCatalogo();
 });
 
-function login(){
-  auth.signInWithEmailAndPassword(email.value,password.value)
-    .catch(e=>alert(e.message));
+loginBtn.onclick=()=>{
+  const e=prompt("Email admin:");
+  const p=prompt("Password:");
+  auth.signInWithEmailAndPassword(e,p).catch(a=>alert(a.message));
+};
+logoutBtn.onclick=()=>auth.signOut();
+
+function slug(t){
+  return t.toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/[^a-z0-9]+/g,"-");
 }
 
-function limpiar(t){
-  return t.replace(/[\u{1F300}-\u{1FAFF}]/gu,"").trim();
-}
-function pid(t){
-  return limpiar(t).toLowerCase().replace(/[^a-z0-9]+/g,"-");
-}
-function precio(n){
-  return "$"+Number(n).toLocaleString("es-DO");
+function limpiar(txt){
+  return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu,"").trim();
 }
 
-function cargarImgs(){
-  return db.collection("products").get().then(s=>{
-    images={};
-    s.forEach(d=>images[d.id]=d.data().image);
-  });
+function esCategoria(row){
+  const filled=row.filter(c=>(c||"").trim());
+  if(filled.length!==1) return false;
+  const t=filled[0];
+  return !/\d/.test(t) && t.length<16;
 }
 
-function cargar(){
-  cargarImgs().then(()=>{
-    cont.innerHTML="";
-    fetch(CSV_URL).then(r=>r.text()).then(csv=>{
-      Papa.parse(csv,{
-        skipEmptyLines:true,
-        complete:res=>{
-          res.data.forEach(row=>{
-            const A=(row[0]||"").trim();
-            const C=(row[2]||"").trim();
-            const D=(row[3]||"").trim();
-            if(!C||!D||D.includes("TRANSITO")) return;
+async function cargarCatalogo(){
+  const cont=document.getElementById("catalogo");
+  cont.innerHTML="";
 
-            const n=D.replace(/\D/g,"");
-            if(!n) return;
+  const res=await fetch(CSV_URL);
+  const csv=await res.text();
 
-            const name=limpiar((A?A+" ":"")+C);
-            const id=pid(name);
-            const img=images[id];
+  Papa.parse(csv,{
+    skipEmptyLines:true,
+    complete: async r=>{
+      for(const row of r.data){
+        const A=(row[0]||"").trim();
+        const C=(row[2]||"").trim();
+        const D=(row[3]||"").trim();
 
-            const div=document.createElement("div");
-            div.className="producto";
-            div.innerHTML=`
-              <div class="descripcion">${name}</div>
-              ${img?`<button class="btn img" onclick="ver('${img}')">📷</button>`:""}
-              ${isAdmin?`<button class="btn admin" onclick="edit('${id}')">✏️</button>`:""}
-              <div class="precio">${precio(n)}</div>
-            `;
-            cont.appendChild(div);
-          });
+        if(esCategoria(row)){
+          const div=document.createElement("div");
+          div.className="categoria";
+          div.textContent=limpiar(row.find(c=>c));
+          cont.appendChild(div);
+          continue;
         }
-      });
-    });
+
+        if(!C||!D||D.toUpperCase().includes("TRANSITO")) continue;
+
+        const id=slug(C);
+        const doc=await db.collection("products").doc(id).get();
+        const img=doc.exists?doc.data().imageUrl:null;
+
+        const p=document.createElement("div");
+        p.className="producto";
+        p.innerHTML=`
+          <div class="descripcion">${limpiar(C)}</div>
+          <div class="precio">$${D.replace(/[^0-9]/g,"")}</div>
+          ${img?`<img src="${img}">`:""}
+          ${isAdmin?`
+            <div class="admin">
+              <input placeholder="Link imagen pública" value="${img||""}">
+              <button>Guardar imagen</button>
+              ${img?`<button>Eliminar</button>`:""}
+            </div>`:""}
+        `;
+        cont.appendChild(p);
+
+        if(isAdmin){
+          const input=p.querySelector("input");
+          const btn=p.querySelector("button");
+          btn.onclick=()=>{
+            db.collection("products").doc(id)
+              .set({imageUrl:input.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+          };
+          const del=p.querySelectorAll("button")[1];
+          if(del) del.onclick=()=>{
+            db.collection("products").doc(id).delete();
+            cargarCatalogo();
+          };
+        }
+      }
+    }
   });
 }
 
-function edit(id){
-  const link=prompt("Link público de imagen:");
-  if(link===null) return;
-  if(!link) db.collection("products").doc(id).delete().then(cargar);
-  else db.collection("products").doc(id).set({image:link}).then(cargar);
-}
-
-function ver(src){
-  imgView.src=src;
-  imgModal.style.display="flex";
-}
-
-cargar();
+cargarCatalogo();
 </script>
+
 </body>
 </html>
