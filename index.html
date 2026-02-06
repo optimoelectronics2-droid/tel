@@ -13,131 +13,668 @@
               </style>
                         </head>
                         <body>
-                            
-
-              <script>
-                              function generarHuella(nombre) {
-    // Normalizar: minúsculas, sin emojis, sin caracteres especiales, espacios únicos
-    return nombre
-        .toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "") // Eliminar emojis
-        .replace(/[^a-z0-9\s]/g, " ")           // Solo letras, números y espacios
-        .replace(/\s+/g, " ")                    // Espacios múltiples → uno
-        .trim();
+                            <!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Trifusion Technologies — Catálogo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+    --bg:#0b0f19;
+    --card:#101624;
+    --card-border:#1f2940;
+    --accent:#00c2ff;
+    --accent-soft:rgba(0,194,255,0.18);
+    --text:#e6ecff;
+    --muted:#9aa4c6;
+    --danger:#ff4b6a;
+    --success:#00c853;
 }
 
-let mapaHuellas = {}; // huella → { id, imageUrl }
+body {
+    font-family: system-ui, Arial, sans-serif;
+    background: radial-gradient(circle at top, #172239 0, #050712 55%, #02030a 100%);
+    margin: 0;
+    color: var(--text);
+    line-height: 1.5;
+}
 
-async function precargarHuellas() {
-    try {
-        const snapshot = await db.collection("products").get();
-        mapaHuellas = {};
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.huella) {
-                mapaHuellas[data.huella] = {
-                    id: doc.id,
-                    imageUrl: data.imageUrl || "",
-                    updatedAt: data.updatedAt?.toDate?.() || null
-                };
-            }
-        });
-        console.log(`✅ ${Object.keys(mapaHuellas).length} huellas cargadas`);
-    } catch (error) {
-        console.error("⚠️ Error cargando huellas:", error);
+header {
+    padding: 18px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.header-inner{
+    max-width: 1100px;
+    margin: 0 auto;
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.logo-title h1{
+    margin:0;
+    font-size:24px;
+    letter-spacing:0.03em;
+    background: linear-gradient(90deg, var(--accent), #7b3fe4, #ff4b6a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+}
+
+.header-contact{
+    font-size:13px;
+    color: var(--muted);
+    text-align:right;
+    line-height: 1.4;
+}
+
+/* Toolbar */
+.toolbar{
+    max-width:1100px;
+    margin:18px auto 0;
+    padding:0 16px 4px;
+    display:grid;
+    grid-template-columns:minmax(0,2fr) minmax(0,1fr);
+    gap:12px;
+}
+
+@media(max-width:800px){
+    .toolbar{
+        grid-template-columns:1fr;
     }
 }
 
-// Dentro del bucle de productos, después de limpiar el nombre:
-const huella = generarHuella(nombreLimpio); // ← NUEVA LÍNEA
-const datosProducto = mapaHuellas[huella] || { id: null, imageUrl: "" }; // ← NUEVA LÍNEA
-const imageUrl = datosProducto.imageUrl; // ← NUEVA LÍNEA (reemplaza la lógica anterior de imágenes)
-
-// En el botón "Guardar Imagen" del admin:
-if (saveBtn) {
-    saveBtn.addEventListener("click", async () => {
-        const url = urlInput.value.trim();
-        if (!url) {
-            alert("Por favor ingresa una URL válida");
-            return;
-        }
-        
-        const huella = generarHuella(nombreLimpio);
-        const existe = mapaHuellas[huella];
-        
-        try {
-            if (existe?.id) {
-                // Actualizar documento existente
-                await db.collection("products").doc(existe.id).update({
-                    imageUrl: url,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } else {
-                // Crear nuevo documento con huella
-                await db.collection("products").add({
-                    huella: huella,
-                    imageUrl: url,
-                    nombreOriginal: nombreLimpio,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-            
-            alert(`✅ Imagen guardada para "${nombreLimpio}"`);
-            await precargarHuellas(); // Recargar mapa
-            renderCatalogo(rows); // Refrescar vista
-        } catch (error) {
-            console.error("Error guardando imagen:", error);
-            alert("Error al guardar la imagen: " + error.message);
-        }
-    });
+.panel{
+    background:rgba(8,12,26,0.9);
+    border-radius:14px;
+    padding:12px;
+    border:1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }
 
-// En el botón "Eliminar Imagen":
-if (deleteBtn) {
-    deleteBtn.addEventListener("click", async () => {
-        if (!confirm(`¿Eliminar la imagen de "${nombreLimpio}"?`)) return;
-        
-        const huella = generarHuella(nombreLimpio);
-        const existe = mapaHuellas[huella];
-        
-        if (!existe?.id) {
-            alert("No hay imagen para eliminar");
-            return;
-        }
-        
-        try {
-            // Solo eliminamos el campo imageUrl, NO el documento
-            // Así la huella persiste si el producto vuelve
-            await db.collection("products").doc(existe.id).update({
-                imageUrl: firebase.firestore.FieldValue.delete(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            alert(`✅ Imagen eliminada para "${nombreLimpio}"`);
-            await precargarHuellas();
-            renderCatalogo(rows);
-        } catch (error) {
-            console.error("Error eliminando imagen:", error);
-            alert("Error al eliminar la imagen: " + error.message);
-        }
-    });
+.panel-title{
+    font-size:13px;
+    margin-bottom:8px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-// Reemplazar la inicialización actual con esto:
-window.addEventListener("DOMContentLoaded", async () => {
-    await precargarHuellas(); // ← CARGA LAS HUELLAS PRIMERO
-    auth.onAuthStateChanged(user => {
-        esAdmin = !!user;
-        document.getElementById("btnLogin").style.display = esAdmin ? "none" : "inline-flex";
-        document.getElementById("btnLogout").style.display = esAdmin ? "inline-flex" : "none";
-        document.getElementById("adminEmail").value = "";
-        document.getElementById("adminPassword").value = "";
-        loginModal.classList.remove("active");
-        cargarCatalogo(); // ← CARGA CATÁLOGO DESPUÉS DE HUELLAS
-    });
-});
+.panel-title::before {
+    content: "";
+    display: inline-block;
+    width: 4px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+}
 
+input[type="text"], input[type="number"]{
+    width:100%;
+    background:#050815;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.08);
+    padding:10px 12px;
+    color:var(--text);
+    font-size:15px;
+    outline:none;
+    transition: border-color 0.3s;
+}
+
+input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 194, 255, 0.2);
+}
+
+button{
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    background:linear-gradient(135deg,var(--accent),#62e3ff);
+    color:#02030a;
+    box-shadow:0 6px 18px rgba(0,194,255,0.35);
+    white-space:nowrap;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(0,194,255,0.45);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+.btn-admin {
+    background: linear-gradient(135deg, #ff8a00, #ff4b6a);
+    box-shadow: 0 6px 18px rgba(255, 75, 106, 0.35);
+}
+
+.btn-admin:hover {
+    box-shadow: 0 8px 22px rgba(255, 75, 106, 0.45);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #c53030, #822727);
+    display: none;
+    box-shadow: 0 6px 18px rgba(197, 48, 48, 0.35);
+}
+
+.btn-logout:hover {
+    box-shadow: 0 8px 22px rgba(197, 48, 48, 0.45);
+}
+
+/* Catálogo */
+.catalogo-wrapper{
+    max-width:1100px;
+    margin:20px auto 40px;
+    padding:0 16px;
+}
+
+.catalogo{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.producto{
+    background:var(--card);
+    border-radius:14px;
+    padding:16px;
+    border:1px solid var(--card-border);
+    box-shadow:0 14px 30px rgba(0,0,0,0.35);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:15px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.producto::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), #7b3fe4, #ff4b6a);
+    opacity: 0.7;
+}
+
+.producto:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 35px rgba(0, 0, 0, 0.45);
+    border-color: rgba(0, 194, 255, 0.3);
+}
+
+.descripcion{
+    font-size:17px;
+    color:var(--accent);
+    font-weight:600;
+    word-break:break-word;
+    flex:1;
+    line-height: 1.4;
+}
+
+.producto-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    min-width:170px;
+    gap:8px;
+}
+
+.precio{
+    font-size:24px;
+    font-weight:800;
+    white-space:nowrap;
+    color:var(--danger);
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(90deg, #ff4b6a, #ff8a00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.precio.transito{
+    color:#ffc14b;
+    text-shadow:0 0 6px rgba(255,193,75,0.45);
+    background: none;
+    color: #ffc14b;
+}
+
+.editor-precio{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.editor-precio label{
+    display:none;
+}
+
+.input-precio {
+    width: 100px;
+    text-align: right;
+    font-weight: 600;
+    background: rgba(0, 30, 60, 0.7);
+    border-color: var(--accent);
+}
+
+.btn-aplicar {
+    background: linear-gradient(135deg, var(--success), #00aa30);
+    color: white;
+    padding: 6px 12px;
+    font-size: 13px;
+    min-width: 50px;
+}
+
+.btn-aplicar:hover {
+    box-shadow: 0 6px 15px rgba(0, 200, 83, 0.4);
+}
+
+#mensajeVacio{
+    text-align:center;
+    margin-top:30px;
+    color:var(--muted);
+    font-size: 18px;
+    padding: 30px;
+    background: rgba(30, 35, 55, 0.6);
+    border-radius: 16px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.impuesto-info {
+    background: rgba(30, 40, 70, 0.7);
+    border-left: 4px solid var(--accent);
+    padding: 10px 15px;
+    border-radius: 0 8px 8px 0;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.impuesto-info strong {
+    color: var(--accent);
+}
+
+.precio-final {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: -4px;
+    font-weight: normal;
+}
+
+/* Modal de Login */
+.login-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.login-modal.active {
+    display: flex;
+}
+
+.login-box {
+    background: rgba(20, 25, 40, 0.95);
+    border-radius: 16px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+}
+
+.login-box h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #00c2ff;
+    font-weight: 700;
+}
+
+.login-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(100, 120, 180, 0.6);
+    background: rgba(10, 15, 30, 0.8);
+    color: white;
+    margin: 10px 0;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: #00c2ff;
+    box-shadow: 0 0 0 3px rgba(0, 194, 255, 0.2);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(90deg, #00c2ff, #0077ff);
+    color: white;
+    font-weight: 700;
+    margin-top: 15px;
+    font-size: 1.05rem;
+}
+
+/* Modal de Imagen */
+.image-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.image-modal.active {
+    display: flex;
+}
+
+.image-modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+    position: relative;
+}
+
+.image-modal-img {
+    max-width: 100%;
+    max-height: 85vh;
+    display: block;
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(30, 30, 40, 0.8);
+    border: 2px solid #ff4b6a;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 2001;
+}
+
+.close-modal:hover {
+    background: #ff4b6a;
+    transform: rotate(90deg);
+}
+
+/* Admin Section */
+.admin-section {
+    background: rgba(30, 25, 50, 0.8);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 8px;
+    border: 1px solid rgba(100, 80, 180, 0.5);
+    width: 100%;
+}
+
+.admin-section h4 {
+    color: #ffb703;
+    margin-bottom: 8px;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(100, 120, 180, 0.6);
+    background: rgba(10, 15, 30, 0.8);
+    color: white;
+    margin: 6px 0;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.admin-input:focus {
+    outline: none;
+    border-color: #00c2ff;
+    box-shadow: 0 0 0 3px rgba(0, 194, 255, 0.2);
+}
+
+.admin-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-save-img {
+    flex: 1;
+    min-width: 100px;
+    background: linear-gradient(90deg, #00c853, #009629);
+    color: white;
+    padding: 6px;
+    font-size: 0.9rem;
+}
+
+.btn-save-img:hover {
+    box-shadow: 0 0 15px rgba(0, 200, 83, 0.3);
+}
+
+.btn-delete-img {
+    flex: 1;
+    min-width: 100px;
+    background: linear-gradient(90deg, #ff4b6a, #c53030);
+    color: white;
+    padding: 6px;
+    font-size: 0.9rem;
+}
+
+.btn-delete-img:hover {
+    box-shadow: 0 0 15px rgba(255, 75, 106, 0.4);
+}
+
+.producto-img {
+    width: 100%;
+    max-height: 150px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: rgba(2, 3, 10, 0.8);
+    border: 1px solid rgba(31, 41, 64, 0.7);
+    margin: 8px 0;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    referrerpolicy: no-referrer;
+}
+
+.producto-img:hover {
+    transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+    .producto {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .producto-right {
+        min-width: auto;
+        align-items: flex-start;
+    }
+    
+    .precio {
+        font-size: 22px;
+    }
+    
+    .descripcion {
+        font-size: 16px;
+    }
+    
+    .admin-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .header-contact {
+        text-align: center;
+    }
+    
+    .toolbar {
+        padding: 0 10px;
+    }
+    
+    .panel {
+        padding: 10px;
+    }
+    
+    button {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .precio {
+        font-size: 20px;
+    }
+    
+    .descripcion {
+        font-size: 15px;
+    }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="logo-title">
+            <h1>Trifusion Technologies</h1>
+        </div>
+        <div class="header-contact">
+            📍 Santo Domingo<br>
+            WhatsApp: +1 (829) 872-5163
+        </div>
+    </div>
+</header>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+    <!-- Buscador -->
+    <div class="panel">
+        <div class="panel-title">Buscar artículos</div>
+        <input id="buscadorProductos" type="text" placeholder="Escribe el modelo o parte del nombre...">
+        <div class="impuesto-info">
+            <strong>ℹ️ Precios finales con 22% de impuesto incluido</strong><br>
+            Los precios mostrados ya incluyen todos los impuestos
+        </div>
+    </div>
+
+    <!-- Acceso admin -->
+    <div class="panel">
+        <div class="panel-title">Acceso Administrador</div>
+        <button id="btnLogin" class="btn-admin">🔐 ADMIN</button>
+        <button id="btnLogout" class="btn-logout">👋 SALIR</button>
+    </div>
+</div>
+
+<!-- CATÁLOGO -->
+<div class="catalogo-wrapper">
+    <div id="catalogo" class="catalogo"></div>
+    <div id="mensajeVacio" style="display:none;">No se encontraron productos.</div>
+</div>
+
+<!-- MODAL DE LOGIN -->
+<div id="loginModal" class="login-modal">
+    <div class="login-box">
+        <h2>Acceso de Administrador</h2>
+        <input type="email" id="adminEmail" class="login-input" placeholder="Correo electrónico" autocomplete="email" required>
+        <input type="password" id="adminPassword" class="login-input" placeholder="Contraseña" autocomplete="current-password" required>
+        <button id="submitLogin" class="btn-login">Iniciar Sesión</button>
+        <div class="impuesto-info" style="margin-top: 20px; background: rgba(40, 30, 20, 0.7); border-left-color: #ffb703;">
+            <strong>ℹ️ Instrucciones para imágenes:</strong>
+            <p style="margin-top:8px;font-size:0.85rem">
+                Pega el link directo de Imgur, ImgBB o Google Drive<br>
+                <strong>Ejemplo ImgBB:</strong><br>
+                <code>https://i.ibb.co/XXXX/tu-imagen.jpg</code>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE IMAGEN -->
+<div id="imageModal" class="image-modal">
+    <div class="image-modal-content">
+        <button class="close-modal">&times;</button>
+        <img id="modalImage" class="image-modal-img" src="" alt="Imagen del producto" referrerpolicy="no-referrer">
+    </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- PapaParse -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<!-- Firebase Config -->
+<script src="firebase-config.js"></script>
+
+<script>
 // =========================
 // CONFIGURACIÓN
 // =========================
@@ -151,13 +688,11 @@ const loginModal = document.getElementById("loginModal");
 const imageModal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
 const closeModal = document.querySelector(".close-modal");
-const loginBtn = document.getElementById("btnLogin");
-const logoutBtn = document.getElementById("btnLogout");
-const submitLogin = document.getElementById("submitLogin");
 
 let esAdmin = false;
-let todosLosProductos = [];
+let productos = {};
 let mapaHuellas = {}; // huella → { id, imageUrl }
+let todosLosProductos = [];
 
 // =========================
 // FUNCIONES AUXILIARES
@@ -166,14 +701,14 @@ function limpiarEmojis(txt) {
     return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
 }
 
+// ✅ NUEVA FUNCIÓN: Generar huella estable del producto (tolerante a cambios menores)
 function generarHuella(nombre) {
-    // Normalización robusta y tolerante
     return nombre
         .toLowerCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
-        .replace(/[^a-z0-9\s]/g, " ")
-        .replace(/\s+/g, " ")
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "") // Eliminar emojis
+        .replace(/[^a-z0-9\s]/g, " ")           // Solo letras, números y espacios
+        .replace(/\s+/g, " ")                    // Espacios múltiples → uno
         .trim();
 }
 
@@ -186,8 +721,8 @@ function esCategoria(row) {
     if (celdasNoVacias.length !== 1) return false;
     
     const texto = celdasNoVacias[0].trim();
-    if (/\d/.test(texto)) return false;
-    if (texto.length > 15) return false;
+    if (/\d/.test(texto)) return false; // Contiene números
+    if (texto.length > 15) return false; // Demasiado largo
     if (texto.toUpperCase().includes("TRANSITO")) return false;
     
     return true;
@@ -219,15 +754,15 @@ async function precargarHuellas() {
 // =========================
 // AUTENTICACIÓN
 // =========================
-loginBtn.addEventListener("click", () => {
+document.getElementById("btnLogin").addEventListener("click", () => {
     loginModal.classList.add("active");
 });
 
-logoutBtn.addEventListener("click", () => {
+document.getElementById("btnLogout").addEventListener("click", () => {
     auth.signOut();
 });
 
-submitLogin.addEventListener("click", () => {
+document.getElementById("submitLogin").addEventListener("click", () => {
     const email = document.getElementById("adminEmail").value.trim();
     const password = document.getElementById("adminPassword").value.trim();
     
@@ -268,12 +803,26 @@ loginModal.addEventListener("click", (e) => {
     }
 });
 
+// Observador de estado de autenticación
+auth.onAuthStateChanged(user => {
+    esAdmin = !!user;
+    document.getElementById("btnLogin").style.display = esAdmin ? "none" : "inline-flex";
+    document.getElementById("btnLogout").style.display = esAdmin ? "inline-flex" : "none";
+    document.getElementById("adminEmail").value = "";
+    document.getElementById("adminPassword").value = "";
+    loginModal.classList.remove("active");
+    cargarCatalogo();
+});
+
 // =========================
 // CARGAR CATÁLOGO
 // =========================
 async function cargarCatalogo() {
     try {
         cont.innerHTML = '<div style="text-align:center;padding:30px;color:var(--accent)">Cargando productos...</div>';
+        
+        // Cargar huellas de Firestore PRIMERO
+        await precargarHuellas();
         
         // Cargar CSV
         const resp = await fetch(CSV_URL);
@@ -304,9 +853,9 @@ function renderCatalogo(rows) {
     let productosMostrados = 0;
     
     rows.forEach(row => {
-        const A = (row[0] || "").trim();
-        const C = (row[2] || "").trim();
-        const D = (row[3] || "").trim();
+        const A = (row[0] || "").trim(); // Emoji/columna A
+        const C = (row[2] || "").trim(); // Nombre/modelo
+        const D = (row[3] || "").trim(); // Precio
         
         // Renderizar categoría
         if (esCategoria(row)) {
@@ -328,11 +877,12 @@ function renderCatalogo(rows) {
         const precioBase = D.replace(/[^0-9]/g, "");
         if (!precioBase) return;
         
+        // Aplicar 22% de impuesto y redondear
         const precioConImpuesto = Math.round(parseFloat(precioBase) * IMPUESTO);
         
-        // Generar nombre limpio y huella
+        // Generar nombre limpio y huella estable
         const nombreLimpio = limpiarEmojis(A ? A + " " : "") + C;
-        const huella = generarHuella(nombreLimpio); // ← CLAVE: Huella estable
+        const huella = generarHuella(nombreLimpio); // ✅ CLAVE: Huella estable
         
         // Obtener datos del producto desde el mapa de huellas
         const datosProducto = mapaHuellas[huella] || { id: null, imageUrl: "" };
@@ -344,24 +894,17 @@ function renderCatalogo(rows) {
         
         // HTML del producto
         let htmlProducto = `
-            <div class="producto-content">
-                <div class="descripcion">${nombreLimpio}</div>
+            <div class="descripcion">${nombreLimpio}</div>
+            <div class="producto-right">
+                <div class="precio">${formatearPrecio(precioConImpuesto)}</div>
         `;
         
         // Mostrar imagen si existe
         if (imageUrl) {
             htmlProducto += `
-                <div class="producto-img-container">
-                    <img src="${imageUrl}" alt="${nombreLimpio}" class="producto-img" referrerpolicy="no-referrer">
-                </div>
+                <img src="${imageUrl}" alt="${nombreLimpio}" class="producto-img" referrerpolicy="no-referrer" style="width:100%;max-height:150px;object-fit:contain;border-radius:10px;background:rgba(2,3,10,0.8);border:1px solid rgba(31,41,64,0.7);margin:8px 0;cursor:pointer;transition:transform 0.3s ease;" onclick="modalImage.src='${imageUrl}';imageModal.classList.add('active')">
             `;
         }
-        
-        htmlProducto += `
-            </div>
-            <div class="producto-right">
-                <div class="precio">${formatearPrecio(precioConImpuesto)}</div>
-        `;
         
         // Sección de administración si es admin
         if (esAdmin) {
@@ -370,8 +913,8 @@ function renderCatalogo(rows) {
                     <h4>📸 Imagen del Producto</h4>
                     <input type="text" class="admin-input image-url" placeholder="Pega URL de imagen" value="${imageUrl}">
                     <div class="admin-actions">
-                        <button class="btn btn-save-img save-image" data-nombre="${nombreLimpio}">💾 Guardar</button>
-                        ${imageUrl ? `<button class="btn btn-delete-img delete-image" data-nombre="${nombreLimpio}">🗑️ Eliminar</button>` : ''}
+                        <button class="btn btn-save-img save-image" data-huella="${huella}" data-nombre="${nombreLimpio}">💾 Guardar</button>
+                        ${imageUrl ? `<button class="btn btn-delete-img delete-image" data-huella="${huella}" data-nombre="${nombreLimpio}">🗑️ Eliminar</button>` : ''}
                     </div>
                 </div>
             `;
@@ -380,22 +923,13 @@ function renderCatalogo(rows) {
         htmlProducto += `</div>`;
         prodEl.innerHTML = htmlProducto;
         
-        // Evento para ver imagen en modal
-        if (imageUrl) {
-            const imgEl = prodEl.querySelector(".producto-img");
-            imgEl.addEventListener("click", (e) => {
-                e.stopPropagation();
-                modalImage.src = imageUrl;
-                imageModal.classList.add("active");
-            });
-        }
-        
         // Eventos de administración
         if (esAdmin) {
             const saveBtn = prodEl.querySelector(".save-image");
             const deleteBtn = prodEl.querySelector(".delete-image");
             const urlInput = prodEl.querySelector(".image-url");
-            const nombreProducto = nombreLimpio; // Capturar nombre para el evento
+            const huellaActual = huella;
+            const nombreProducto = nombreLimpio;
             
             if (saveBtn) {
                 saveBtn.addEventListener("click", async () => {
@@ -405,7 +939,6 @@ function renderCatalogo(rows) {
                         return;
                     }
                     
-                    const huellaActual = generarHuella(nombreProducto);
                     const existe = mapaHuellas[huellaActual];
                     
                     try {
@@ -427,7 +960,7 @@ function renderCatalogo(rows) {
                         
                         alert(`✅ Imagen guardada para "${nombreProducto}"`);
                         await precargarHuellas(); // Recargar mapa de huellas
-                        renderCatalogo(rows); // Refrescar vista
+                        renderCatalogo(todosLosProductos); // Refrescar vista
                     } catch (error) {
                         console.error("Error guardando imagen:", error);
                         alert("Error al guardar la imagen: " + error.message);
@@ -439,7 +972,6 @@ function renderCatalogo(rows) {
                 deleteBtn.addEventListener("click", async () => {
                     if (!confirm(`¿Eliminar la imagen de "${nombreProducto}"?`)) return;
                     
-                    const huellaActual = generarHuella(nombreProducto);
                     const existe = mapaHuellas[huellaActual];
                     
                     if (!existe?.id) {
@@ -457,7 +989,7 @@ function renderCatalogo(rows) {
                         
                         alert(`✅ Imagen eliminada para "${nombreProducto}"`);
                         await precargarHuellas();
-                        renderCatalogo(rows);
+                        renderCatalogo(todosLosProductos);
                     } catch (error) {
                         console.error("Error eliminando imagen:", error);
                         alert("Error al eliminar la imagen: " + error.message);
@@ -481,20 +1013,53 @@ buscador.addEventListener("input", (e) => {
     renderCatalogo(todosLosProductos);
 });
 
-// Inicialización mejorada
-window.addEventListener("DOMContentLoaded", async () => {
-    await precargarHuellas(); // ← CARGA LAS HUELLAS PRIMERO
-    
-    auth.onAuthStateChanged(user => {
-        esAdmin = !!user;
-        loginBtn.style.display = esAdmin ? "none" : "inline-flex";
-        logoutBtn.style.display = esAdmin ? "inline-flex" : "none";
-        document.getElementById("adminEmail").value = "";
-        document.getElementById("adminPassword").value = "";
-        loginModal.classList.remove("active");
-        cargarCatalogo(); // ← CARGA CATÁLOGO DESPUÉS DE HUELLAS
-    });
-});
+// Cargar catálogo al iniciar
+window.addEventListener("DOMContentLoaded", cargarCatalogo);
+</script>
+
+</body>
+</html>
+
+
+
+              <script>
+                              // Genera huella estable del producto (tolerante a cambios menores)
+function generarHuella(nombre) {
+    return nombre
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, "") // Eliminar emojis
+        .replace(/[^a-z0-9\s]/g, " ")           // Solo letras, números y espacios
+        .replace(/\s+/g, " ")                    // Espacios múltiples → uno
+        .trim();
+}
+
+let mapaHuellas = {}; // huella → { id, imageUrl }
+
+async function precargarHuellas() {
+    try {
+        const snapshot = await db.collection("products").get();
+        mapaHuellas = {};
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.huella) {
+                mapaHuellas[data.huella] = {
+                    id: doc.id,
+                    imageUrl: data.imageUrl || "",
+                    updatedAt: data.updatedAt?.toDate?.() || null
+                };
+            }
+        });
+        console.log(`✅ ${Object.keys(mapaHuellas).length} huellas cargadas`);
+    } catch (error) {
+        console.error("⚠️ Error cargando huellas:", error);
+    }
+}
+
+// Dentro del bucle de productos, después de limpiar el nombre:
+const huella = generarHuella(nombreLimpio); // ← NUEVA LÍNEA
+const datosProducto = mapaHuellas[huella] || { id: null, imageUrl: "" }; // ← NUEVA LÍNEA
+const imageUrl = datosProducto.imageUrl; // ← NUEVA LÍNEA (reemplaza lógica anterior de imágenes)
 
 
               </script>
